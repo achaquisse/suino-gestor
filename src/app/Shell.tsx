@@ -1,0 +1,206 @@
+import { Suspense, useLayoutEffect, useRef, useState } from 'react'
+import { NavLink, Outlet, useLocation, useMatch, useNavigate, useParams } from 'react-router'
+import { Avatar, Icon, Loading, cx, usePopover, useToast } from '@/ui'
+import { ROLE_LABEL } from '@/lib/constants'
+import { useAnimal } from '@/lib/queries'
+import { useAuth } from './auth'
+import { useFarm } from './farm'
+import { useOverlays } from './overlays'
+
+type NavDef = { to: string; label: string; icon: string; end?: boolean }
+
+function useNavDefs(): NavDef[] {
+  const { canSeeMoney } = useFarm()
+  const all: (NavDef & { money?: boolean })[] = [
+    { to: '/', label: 'Hoje', icon: 'today', end: true },
+    { to: '/herd', label: 'Animais', icon: 'fence' },
+    { to: '/money', label: 'Finanças', icon: 'savings', money: true },
+    { to: '/reports', label: 'Relatórios', icon: 'monitoring', money: true },
+    { to: '/help', label: 'Ajuda', icon: 'help' },
+  ]
+  return all.filter((n) => canSeeMoney || !n.money)
+}
+
+function useIndicator(path: string, count: number) {
+  const ref = useRef<HTMLElement>(null)
+  const [pos, setPos] = useState<{ l: number; w: number } | null>(null)
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = ref.current?.querySelector<HTMLElement>('[aria-current="page"]')
+      setPos(el ? { l: el.offsetLeft, w: el.offsetWidth } : null)
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    if (ref.current) ro.observe(ref.current)
+    return () => ro.disconnect()
+  }, [path, count])
+  return [ref, pos] as const
+}
+
+function useQuickContext() {
+  const pen = useMatch('/herd/pens/:penId')
+  const { tag } = useParams()
+  const animalRoute = useMatch('/herd/animals/:tag')
+  const animal = useAnimal(animalRoute ? tag : undefined).data
+  if (animal) return { animalId: animal.id }
+  if (pen?.params.penId) return { penId: pen.params.penId }
+  return undefined
+}
+
+function UserMenu({ compact }: { compact?: boolean }) {
+  const { farm, memberships, switchFarm, user } = useFarm()
+  const { signOut } = useAuth()
+  const navigate = useNavigate()
+  const toast = useToast()
+  const { open, setOpen, ref: popRef } = usePopover()
+  const toggle = () => setOpen((o) => !o)
+  const item = 'flex items-center gap-2.5 rounded-[10px] border-0 bg-transparent px-3 py-2.5 text-left text-sm font-medium'
+  return (
+    <div ref={popRef} className="relative">
+      {compact ? (
+        <button type="button" onClick={toggle} aria-label="Menu do utilizador" aria-expanded={open}
+          className="grid h-10 w-10 place-items-center rounded-full border-0 bg-brand p-0 text-[13px] font-semibold text-white active:scale-[0.92]">
+          {user.initials}
+        </button>
+      ) : (
+        <button type="button" onClick={toggle} aria-expanded={open}
+          className="ml-1.5 flex h-[46px] items-center gap-2.5 whitespace-nowrap rounded-full border border-line bg-white py-0 pr-1 pl-4 hover:border-[#D4D4E2]">
+          <span className="max-w-[160px] truncate text-sm font-semibold">{farm.name}</span>
+          <Avatar initials={user.initials} />
+        </button>
+      )}
+      {open && (
+        <div className={cx('absolute right-0 z-40 flex w-[280px] max-w-[calc(100vw-24px)] animate-pf-pop flex-col gap-0.5 rounded-[18px] border border-line bg-white p-1.5 shadow-pop', compact ? 'top-12' : 'top-[54px]')}>
+          <div className="flex items-center gap-3 px-3 pt-3 pb-3.5">
+            <Avatar initials={user.initials} size={40} gradient />
+            <div className="min-w-0">
+              <div className="text-sm font-semibold">{user.name}</div>
+              <div className="truncate text-xs text-muted">{user.email}</div>
+            </div>
+          </div>
+          <div className="mx-1.5 h-px bg-divider" />
+          <div className="px-3 pt-2.5 pb-1 text-[11px] uppercase tracking-[0.06em] text-faint">Granjas</div>
+          {memberships.map((m) => (
+            <button key={m.farm_id} type="button"
+              onClick={() => {
+                setOpen(false)
+                if (m.farm_id !== farm.id) {
+                  switchFarm(m.farm_id)
+                  navigate('/')
+                  toast(`Mudou para ${m.farm.name}`)
+                }
+              }}
+              className={cx('flex items-center justify-between gap-2 rounded-[10px] border-0 px-3 py-2.5 text-left hover:bg-hover', m.farm_id === farm.id ? 'bg-hover' : 'bg-transparent')}>
+              <span className="truncate text-sm font-medium">{m.farm.name}</span>
+              <span className="shrink-0 text-xs text-muted">{ROLE_LABEL[m.role]}</span>
+            </button>
+          ))}
+          <button type="button" onClick={() => { setOpen(false); navigate('/welcome') }} className={cx(item, 'text-accent-strong hover:bg-accent-wash')}>
+            <Icon name="add" className="text-accent" />Nova granja
+          </button>
+          <div className="mx-1.5 my-1 h-px bg-divider" />
+          <button type="button" onClick={() => { setOpen(false); navigate('/settings') }} className={cx(item, 'hover:bg-hover')}>
+            <Icon name="settings" className="text-muted" />Definições
+          </button>
+          <button type="button"
+            onClick={async () => {
+              setOpen(false)
+              try {
+                await signOut()
+              } catch {
+                toast('Sem ligação — não foi possível terminar a sessão.', 'error')
+              }
+            }}
+            className={cx(item, 'text-danger hover:bg-danger-soft')}>
+            <Icon name="logout" />Terminar sessão
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function Shell() {
+  const navDefs = useNavDefs()
+  const location = useLocation()
+  const { farm, memberships, switchFarm } = useFarm()
+  const { openLog } = useOverlays()
+  const quickCtx = useQuickContext()
+  const toast = useToast()
+  const [topRef, topPos] = useIndicator(location.pathname, navDefs.length)
+  const [bottomRef, bottomPos] = useIndicator(location.pathname, navDefs.length)
+
+  const cycleFarm = () => {
+    if (memberships.length < 2) return
+    const i = memberships.findIndex((m) => m.farm_id === farm.id)
+    const next = memberships[(i + 1) % memberships.length]
+    switchFarm(next.farm_id)
+    toast(`Mudou para ${next.farm.name}`)
+  }
+  const openQuick = () => openLog('menu', quickCtx)
+
+  return (
+    <div className="app-bg flex min-h-screen justify-center">
+      <div className="relative flex min-h-screen w-full flex-col">
+        {/* Wide header */}
+        <div className="sticky top-0 z-30 mx-auto hidden w-full max-w-[1120px] px-10 pt-4 wide:block">
+          <header className="glass flex items-center gap-1 rounded-[22px] border border-white/95 p-2 shadow-[inset_0_1px_0_#fff,0_1px_2px_rgba(16,24,40,0.05),0_14px_40px_rgba(91,76,245,0.14)]">
+            <div className="mr-2 grid h-[42px] w-[42px] shrink-0 place-items-center rounded-[13px] bg-brand text-base font-bold text-white shadow-[0_4px_12px_rgba(91,76,240,0.3)]">P</div>
+            <nav ref={topRef} className="relative flex min-w-0 flex-1 gap-0.5" aria-label="Principal">
+              <div className="absolute -bottom-0.5 h-[3px] rounded-t-[3px] bg-accent transition-[left,width,opacity] duration-[450ms] ease-spring"
+                style={{ left: (topPos?.l ?? 0) + 12, width: Math.max(0, (topPos?.w ?? 0) - 24), opacity: topPos ? 1 : 0 }} />
+              {navDefs.map((n) => (
+                <NavLink key={n.to} to={n.to} end={n.end} title={n.label}
+                  className={({ isActive }) => cx('group relative z-[1] flex h-11 items-center gap-2 whitespace-nowrap rounded-[14px] px-3.5 text-sm transition-colors hover:bg-[rgba(91,76,240,0.06)] hover:no-underline active:scale-[0.96]',
+                    isActive ? 'font-semibold text-ink hover:text-ink' : 'font-medium text-[#5A5A6E] hover:text-[#5A5A6E]')}>
+                  {({ isActive }) => (<><Icon name={n.icon} fill={isActive} /><span className={cx(!isActive && 'hidden xwide:inline')}>{n.label}</span></>)}
+                </NavLink>
+              ))}
+            </nav>
+            <button type="button" onClick={openQuick}
+              className="ml-1.5 flex h-11 items-center gap-1.5 whitespace-nowrap rounded-[14px] border-0 bg-cta px-[18px] font-semibold text-white shadow-cta hover:bg-cta-hover hover:shadow-cta-hover active:scale-[0.97]">
+              <Icon name="add" />Novo
+            </button>
+            <UserMenu />
+          </header>
+        </div>
+
+        {/* Narrow top bar */}
+        <div className="glass sticky top-0 z-20 flex items-center gap-2.5 border-b border-white/90 px-4 py-3 wide:hidden">
+          <div className="grid h-7 w-7 place-items-center rounded-lg bg-brand text-sm font-bold text-white shadow-[0_4px_14px_rgba(91,76,240,0.26)]">P</div>
+          <button type="button" onClick={cycleFarm} className="flex min-w-0 flex-1 items-center gap-1 border-0 bg-transparent p-0 text-left">
+            <span className="truncate text-sm font-semibold">{farm.name}</span>
+            {memberships.length > 1 && <Icon name="expand_more" size={16} className="text-muted" />}
+          </button>
+          <UserMenu compact />
+        </div>
+
+        <main className="mx-auto w-full max-w-[1120px] flex-1 px-4 pt-5 pb-[120px] wide:px-10 wide:pt-7 wide:pb-14">
+          <Suspense fallback={<Loading />}>
+            <div key={location.pathname} className="animate-pf-fade">
+              <Outlet />
+            </div>
+          </Suspense>
+        </main>
+
+        {/* Bottom nav */}
+        <nav ref={bottomRef} aria-label="Principal"
+          className="glass sticky bottom-[calc(10px+env(safe-area-inset-bottom))] z-20 mx-2.5 flex rounded-[24px] border border-white/95 p-1.5 shadow-[inset_0_1px_0_#fff,0_14px_40px_rgba(91,76,245,0.18)] wide:hidden">
+          <div className="absolute top-1.5 bottom-1.5 rounded-[18px] bg-accent-soft transition-[left,width,opacity] duration-[450ms] ease-spring"
+            style={{ left: bottomPos?.l ?? 0, width: bottomPos?.w ?? 0, opacity: bottomPos ? 1 : 0 }} />
+          <button type="button" onClick={openQuick} aria-label="Registo rápido"
+            className="absolute -top-[78px] right-4 grid h-[58px] w-[58px] place-items-center rounded-[18px] border-0 bg-cta text-white shadow-[0_6px_18px_rgba(91,76,240,0.34)] transition-transform active:scale-90 active:rotate-90">
+            <Icon name="add" size={30} />
+          </button>
+          {navDefs.map((n) => (
+            <NavLink key={n.to} to={n.to} end={n.end}
+              className={({ isActive }) => cx('relative z-[1] flex h-[54px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] transition-[color,transform] hover:no-underline active:scale-[0.92]',
+                isActive ? 'font-semibold text-accent hover:text-accent' : 'font-medium text-[#5A5A6E] hover:text-[#5A5A6E]')}>
+              {({ isActive }) => (<><Icon name={n.icon} size={24} fill={isActive} />{n.label}</>)}
+            </NavLink>
+          ))}
+        </nav>
+      </div>
+    </div>
+  )
+}
