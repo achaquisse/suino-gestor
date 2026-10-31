@@ -57,6 +57,7 @@ function FinForm({ preset, onClose }: { preset?: FinPreset; onClose: () => void 
   const [files, setFiles] = useState<File[]>([])
   const [splitPick, setSplitPick] = useState<SplitDraft[] | null>(null)
   const [error, setError] = useState('')
+  const [detailsOpen, setDetailsOpen] = useState(false)
 
   const catOptions = categories.filter((c) => (type === 'Despesa' ? c.grp === 'Investimento' || c.grp === 'Operacional' : c.grp === 'Receita'))
   const visibleCategories = catOptions.filter((c) => c.name.toLocaleLowerCase().includes(catFilter.toLocaleLowerCase()))
@@ -84,6 +85,16 @@ function FinForm({ preset, onClose }: { preset?: FinPreset; onClose: () => void 
   const balanceOf = (id: string) => balancesQ.data?.find((b) => b.id === id)?.balance ?? 0
   const after = splits.reduce((a, s) => a + balanceOf(s.account_id), 0) + (type === 'Despesa' ? -value : value)
   const afterLabel = splits.length > 1 ? `das ${splits.length} contas` : `de ${accounts.find((a) => a.id === splits[0]?.account_id)?.name ?? '—'}`
+  const detailsSummary = [
+    desc.trim() && 'Descrição preenchida',
+    batchMode !== 'none' && (selectedBatches.length > 0 ? `${selectedBatches.length} ${selectedBatches.length === 1 ? 'lote' : 'lotes'}${allocationMode !== 'none' ? ' · com distribuição' : ''}` : 'Lotes por seleccionar'),
+    files.length > 0 && `${files.length} ${files.length === 1 ? 'anexo' : 'anexos'}`,
+  ].filter(Boolean).join(' · ') || 'Descrição, lotes e anexos'
+
+  const detailError = (message: string) => {
+    setDetailsOpen(true)
+    setError(message)
+  }
 
   const kindFor = (): TxKind => {
     if (type === 'Receita') return cat === 'Aporte' ? 'Aporte' : cat === 'Venda de animais' ? 'Venda' : 'Receita'
@@ -100,11 +111,11 @@ function FinForm({ preset, onClose }: { preset?: FinPreset; onClose: () => void 
     if (!(Number.isFinite(value) && value > 0)) return setError('Indique o valor.')
     if (!validDate(date)) return setError('Indique uma data válida.')
     if (splits.some((s) => !accounts.some((a) => a.id === s.account_id))) return setError('Escolha uma conta de pagamento activa.')
-    if (batchMode !== 'none' && !selectedBatches.length) return setError('Seleccione pelo menos um lote.')
+    if (batchMode !== 'none' && !selectedBatches.length) return detailError('Seleccione pelo menos um lote.')
     const shares = selectedBatches.map((id, i) => numP(share(id, i)))
     if (allocationMode !== 'none' && selectedBatches.length && (shares.some((n) => !Number.isFinite(n) || n < 0)
       || Math.abs(shares.reduce((n, s) => n + s, 0) - (allocationMode === 'percent' ? 100 : value)) > 0.01))
-      return setError(allocationMode === 'percent' ? 'As percentagens dos lotes devem somar 100%.' : 'Os valores dos lotes devem somar o total do movimento.')
+      return detailError(allocationMode === 'percent' ? 'As percentagens dos lotes devem somar 100%.' : 'Os valores dos lotes devem somar o total do movimento.')
     const allocated = allocationMode === 'none' ? [] : selectedBatches.map((batch_id, i) => ({ batch_id,
       amount: (type === 'Despesa' ? -1 : 1) * (allocationMode === 'percent'
         ? i === selectedBatches.length - 1 ? Math.round((value - shares.slice(0, i).reduce((n, s) => n + Math.round(value * s) / 100, 0)) * 100) / 100 : Math.round(value * shares[i]) / 100
@@ -112,7 +123,7 @@ function FinForm({ preset, onClose }: { preset?: FinPreset; onClose: () => void 
     }))
     if (allocated.length && (allocated.some((a) => (type === 'Despesa' ? -a.amount : a.amount) < 0)
       || Math.abs(allocated.reduce((n, a) => n + a.amount, 0) - (type === 'Despesa' ? -value : value)) > 0.001))
-      return setError('A distribuição por lote deve corresponder exactamente ao total.')
+      return detailError('A distribuição por lote deve corresponder exactamente ao total.')
     const se = splitCheck(splits)
     if (se) return setError(se)
     setError('')
@@ -137,13 +148,28 @@ function FinForm({ preset, onClose }: { preset?: FinPreset; onClose: () => void 
 
   return (
     <Sheet open onClose={onClose} title="Novo movimento" maxWidth={560}
-      footer={<Button variant="primary" size="lg" className="flex-1" loading={create.isPending} disabled={loading || !!fetchError} onClick={save}>{type === 'Despesa' ? 'Registar despesa' : 'Registar receita'}</Button>}>
-      <div className="flex flex-col gap-4">
+      footer={<div className="flex min-w-0 flex-1 flex-col gap-3">
+        <div className="flex flex-col gap-1 rounded-xl bg-hover px-3 py-2.5">
+          <div className="flex min-w-0 items-baseline justify-between gap-3">
+            <span className="shrink-0 text-xs text-muted">Total do movimento</span>
+            <span className={cx('tabular whitespace-nowrap text-base font-semibold', type === 'Receita' ? 'text-success-strong' : 'text-ink')}>
+              {type === 'Despesa' ? '−' : '+'}{fmt(value)} MT
+            </span>
+          </div>
+          <div className="flex min-w-0 items-baseline justify-between gap-3">
+            <span className="min-w-0 truncate text-xs text-muted" title={`Saldo ${afterLabel} após`}>Saldo {afterLabel} após</span>
+            <span className="tabular shrink-0 whitespace-nowrap text-sm font-semibold text-ink">{after < 0 ? '−' : ''}{fmt(after)} MT</span>
+          </div>
+        </div>
+        <Button variant="primary" size="lg" className="w-full" loading={create.isPending} disabled={loading || !!fetchError} onClick={save}>{type === 'Despesa' ? 'Registar despesa' : 'Registar receita'}</Button>
+      </div>}>
+      <div className="flex flex-col gap-3.5">
         {fetchError && <FormError>{errorMessage(fetchError)}</FormError>}
-        <div className="flex rounded-[14px] bg-hover p-1">
+        <FormError>{error}</FormError>
+        <div className="flex rounded-[14px] bg-hover p-1" role="group" aria-label="Tipo de movimento">
           {(['Despesa', 'Receita'] as const).map((t) => (
-            <button key={t} type="button" onClick={() => { setType(t); setCatPick(null); setStockPick(''); setCatOpen(false) }}
-              className={cx('h-10 flex-1 rounded-[10px] border-0 font-semibold transition-colors', type === t ? 'bg-white text-ink shadow-[0_1px_2px_rgba(0,0,0,0.08)]' : 'bg-transparent text-muted')}>
+            <button key={t} type="button" aria-pressed={type === t} onClick={() => { setType(t); setCatPick(null); setStockPick(''); setCatOpen(false) }}
+              className={cx('h-10 flex-1 rounded-[10px] border-0 font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-accent', type === t ? 'bg-white text-ink shadow-[0_1px_2px_rgba(0,0,0,0.08)]' : 'bg-transparent text-muted hover:text-ink')}>
               {t}
             </button>
           ))}
@@ -191,7 +217,7 @@ function FinForm({ preset, onClose }: { preset?: FinPreset; onClose: () => void 
           </Select>
         </Field>}
 
-        {product && <div className="grid grid-cols-2 gap-3">
+        {product && <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label={`Quantidade (${unit})`}><Input type="number" min="0" step="any" value={quantityText} onChange={(e) => setQuantityText(e.target.value)} placeholder="0" /></Field>
           <Field label={`Preço por ${unit} (MT)`}><Input type="number" min="0" step="any" value={priceText} onChange={(e) => setPricePick({ category: cat, stockId, text: e.target.value })} placeholder="0" /></Field>
         </div>}
@@ -202,67 +228,65 @@ function FinForm({ preset, onClose }: { preset?: FinPreset; onClose: () => void 
         </div>
 
         <Field label="Data"><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
-        <Field label="Descrição"><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Opcional" rows={3} /></Field>
-        <Field label="Lote">
-          <Select value={batchMode} onChange={(e) => { setBatchMode(e.target.value as typeof batchMode); setAllocationMode('none'); setBatchShares({}) }}>
-            <option value="none">Sem lote</option>
-            <option value="all">Todos os lotes activos</option>
-            <option value="custom">Seleccionar lotes</option>
-          </Select>
-        </Field>
-        {batchMode === 'custom' && <div className="flex flex-wrap gap-2">
-          {batches.map((b) => <label key={b.id} className="flex items-center gap-2 rounded-xl border border-line px-3 py-2 text-sm">
-            <input type="checkbox" checked={batchPick.includes(b.id)} onChange={(e) => {
-              setBatchPick((prev) => e.target.checked ? [...prev, b.id] : prev.filter((id) => id !== b.id))
-              setBatchShares({})
-            }} />{b.code}
-          </label>)}
-          {!batches.length && <span className="text-sm text-muted">Não existem lotes activos.</span>}
-        </div>}
-        {selectedBatches.length > 0 && <Field label="Distribuição pelos lotes">
-          <Select value={allocationMode} onChange={(e) => { setAllocationMode(e.target.value as typeof allocationMode); setBatchShares({}) }}>
-            <option value="none">Apenas associar (sem distribuir o valor)</option>
-            <option value="percent">Distribuir por percentagem</option>
-            <option value="amount">Distribuir por valor (MT)</option>
-          </Select>
-        </Field>}
-        {allocationMode !== 'none' && selectedBatches.map((id, i) => <Field key={id} label={`${batches.find((b) => b.id === id)?.code ?? 'Lote'} · ${allocationMode === 'percent' ? '%' : 'MT'}`}>
-          <Input type="number" min="0" step="any" value={share(id, i)} onChange={(e) => setBatchShares((prev) => ({ ...prev, [id]: e.target.value }))} />
-        </Field>)}
 
-        <input ref={fileRef} type="file" multiple accept="image/*,application/pdf" hidden
-          onChange={(e) => { setFiles((f) => [...f, ...Array.from(e.target.files ?? [])]); e.target.value = '' }} />
-        <button type="button" onClick={() => fileRef.current?.click()}
-          className="flex h-[54px] items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-dashed border-[#C9C2FB] bg-[#FAFAFF] font-medium text-accent hover:bg-accent-wash">
-          <Icon name="attach_file" />Anexar factura, recibo ou comprovativo
-        </button>
-        {files.length > 0 && (
-          <div className="flex flex-col gap-1.5">
-            {files.map((f, i) => (
-              <div key={`${f.name}-${i}`} className="flex items-center gap-2 rounded-xl border border-line px-3 py-2 text-sm">
-                <Icon name={f.type.startsWith('image/') ? 'image' : 'picture_as_pdf'} size={18} className="text-muted" />
-                <span className="min-w-0 flex-1 truncate">{f.name}</span>
-                <button type="button" aria-label="Remover anexo" onClick={() => setFiles((l) => l.filter((_, j) => j !== i))}
-                  className="grid h-8 w-8 place-items-center rounded-lg border-0 bg-transparent text-muted hover:bg-hover"><Icon name="close" size={18} /></button>
+        <section className="border-t border-line pt-3">
+          <button type="button" aria-expanded={detailsOpen} aria-controls="fin-details" onClick={() => setDetailsOpen((open) => !open)}
+            className="flex w-full items-center gap-3 rounded-xl border-0 bg-hover px-3 py-2.5 text-left hover:bg-accent-wash focus-visible:outline-2 focus-visible:outline-accent">
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-ink">Mais detalhes <span className="font-normal text-muted">· opcional</span></span>
+              <span className="block truncate text-xs text-muted">{detailsSummary}</span>
+            </span>
+            <Icon name={detailsOpen ? 'expand_less' : 'expand_more'} size={20} className="shrink-0 text-muted" />
+          </button>
+          <div id="fin-details" className={cx('flex flex-col gap-3.5 pt-3', !detailsOpen && 'hidden')}>
+            <Field label="Descrição"><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Opcional" rows={3} /></Field>
+            <Field label="Lote">
+              <Select value={batchMode} onChange={(e) => { setBatchMode(e.target.value as typeof batchMode); setAllocationMode('none'); setBatchShares({}) }}>
+                <option value="none">Sem lote</option>
+                <option value="all">Todos os lotes activos</option>
+                <option value="custom">Seleccionar lotes</option>
+              </Select>
+            </Field>
+            {batchMode === 'custom' && <div className="flex flex-wrap gap-2">
+              {batches.map((b) => <label key={b.id} className="flex items-center gap-2 rounded-xl border border-line px-3 py-2 text-sm">
+                <input type="checkbox" checked={batchPick.includes(b.id)} onChange={(e) => {
+                  setBatchPick((prev) => e.target.checked ? [...prev, b.id] : prev.filter((id) => id !== b.id))
+                  setBatchShares({})
+                }} />{b.code}
+              </label>)}
+              {!batches.length && <span className="text-sm text-muted">Não existem lotes activos.</span>}
+            </div>}
+            {selectedBatches.length > 0 && <Field label="Distribuição pelos lotes">
+              <Select value={allocationMode} onChange={(e) => { setAllocationMode(e.target.value as typeof allocationMode); setBatchShares({}) }}>
+                <option value="none">Apenas associar (sem distribuir o valor)</option>
+                <option value="percent">Distribuir por percentagem</option>
+                <option value="amount">Distribuir por valor (MT)</option>
+              </Select>
+            </Field>}
+            {allocationMode !== 'none' && selectedBatches.map((id, i) => <Field key={id} label={`${batches.find((b) => b.id === id)?.code ?? 'Lote'} · ${allocationMode === 'percent' ? '%' : 'MT'}`}>
+              <Input type="number" min="0" step="any" value={share(id, i)} onChange={(e) => setBatchShares((prev) => ({ ...prev, [id]: e.target.value }))} />
+            </Field>)}
+
+            <input ref={fileRef} type="file" multiple accept="image/*,application/pdf" hidden
+              onChange={(e) => { setFiles((f) => [...f, ...Array.from(e.target.files ?? [])]); e.target.value = '' }} />
+            <button type="button" onClick={() => fileRef.current?.click()}
+              className="flex min-h-[54px] items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-dashed border-[#C9C2FB] bg-[#FAFAFF] px-3 py-2 text-center font-medium text-accent hover:bg-accent-wash focus-visible:outline-2 focus-visible:outline-accent">
+              <Icon name="attach_file" className="shrink-0" />Anexar factura, recibo ou comprovativo
+            </button>
+            {files.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                {files.map((f, i) => (
+                  <div key={`${f.name}-${i}`} className="flex items-center gap-2 rounded-xl border border-line px-3 py-2 text-sm">
+                    <Icon name={f.type.startsWith('image/') ? 'image' : 'picture_as_pdf'} size={18} className="text-muted" />
+                    <span className="min-w-0 flex-1 truncate">{f.name}</span>
+                    <button type="button" aria-label="Remover anexo" onClick={() => setFiles((l) => l.filter((_, j) => j !== i))}
+                      className="grid h-8 w-8 place-items-center rounded-lg border-0 bg-transparent text-muted hover:bg-hover focus-visible:outline-2 focus-visible:outline-accent"><Icon name="close" size={18} /></button>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-        )}
-
-        <div className="grid grid-cols-2 overflow-hidden rounded-[14px] bg-[#F7F7FB]">
-          <div className="px-4 py-3.5">
-            <div className="text-[13px] text-muted">Total</div>
-            <div className={cx('tabular text-xl font-semibold', type === 'Receita' && 'text-success')}>
-              {type === 'Despesa' ? '−' : '+'}{fmt(value)} <span className="text-xs text-faint">MT</span>
-            </div>
-          </div>
-          <div className="border-l border-line px-4 py-3.5">
-            <div className="truncate text-[13px] text-muted">Saldo {afterLabel} após</div>
-            <div className="tabular text-xl font-semibold">{after < 0 ? '−' : ''}{fmt(after)}</div>
-          </div>
-        </div>
-
-        <FormError>{error}</FormError>
+        </section>
       </div>
     </Sheet>
   )

@@ -1,4 +1,5 @@
 import { useState, useSyncExternalStore } from 'react'
+import { useNavigate } from 'react-router'
 import { useFarm } from '@/app/farm'
 import { useAuth } from '@/app/auth'
 import { errorMessage } from '@/lib/supabase'
@@ -71,6 +72,7 @@ function ProfileCard() {
 
 function FarmsCard() {
   const { farm, memberships, farmId, isOwner, switchFarm } = useFarm()
+  const navigate = useNavigate()
   const update = useUpdateFarm()
   const toast = useToast()
   const [name, setName] = useState(farm.name)
@@ -107,6 +109,7 @@ function FarmsCard() {
           {m.farm_id === farmId && <Chip tone="success">Activa</Chip>}
         </button>
       ))}
+      <Button icon="add" className="self-start" onClick={() => navigate('/welcome')}>Nova granja</Button>
     </Card>
   )
 }

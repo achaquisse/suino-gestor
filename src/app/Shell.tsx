@@ -97,9 +97,6 @@ function UserMenu({ compact }: { compact?: boolean }) {
               <span className="shrink-0 text-xs text-muted">{ROLE_LABEL[m.role]}</span>
             </button>
           ))}
-          <button type="button" onClick={() => { setOpen(false); navigate('/welcome') }} className={cx(item, 'text-accent-strong hover:bg-accent-wash')}>
-            <Icon name="add" className="text-accent" />Nova granja
-          </button>
           <div className="mx-1.5 my-1 h-px bg-divider" />
           <button type="button" onClick={() => { setOpen(false); navigate('/settings') }} className={cx(item, 'hover:bg-hover')}>
             <Icon name="settings" className="text-muted" />Definições
