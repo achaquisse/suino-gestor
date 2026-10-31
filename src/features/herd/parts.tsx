@@ -1,4 +1,5 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
+import { setUrlParams, useUrlState } from '@/lib/urlState'
 import { Link, useNavigate } from 'react-router'
 import { Card, Icon, IconTile, Pager, Select, cx, usePaged } from '@/ui'
 import { TONE } from '@/lib/constants'
@@ -56,8 +57,9 @@ export function AnimalTable({ title, rows, thirdCol, showSearch, emptyText = 'Ne
   title: string; rows: HA[]; thirdCol: 'pen' | 'parents'; showSearch?: boolean; emptyText?: string
 }) {
   const nav = useNavigate()
-  const [sort, setSort] = useState<SortKey>('tag')
-  const [q, setQ] = useState('')
+  const [sort, setSort] = useUrlState<SortKey>('sort', 'tag', SORTS.map(([v]) => v))
+  const [q] = useUrlState('q', '')
+  const setQ = (v: string) => setUrlParams({ q: v, page: null })
   const ql = q.trim().toLowerCase()
   const filtered = useMemo(
     () => sortAnimals(showSearch && ql ? rows.filter((a) => `${a.tag} ${a.stage} ${a.status}`.toLowerCase().includes(ql)) : rows, sort),

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { FREQS } from '@/lib/constants'
-import { addMonths, numP, todayISO } from '@/lib/format'
+import { addMonths, numP, todayISO, validDate } from '@/lib/format'
 import { useAccounts, useCategories, useTableMutations } from '@/lib/queries'
 import { errorMessage } from '@/lib/supabase'
 import type { RecurringExpense } from '@/lib/database.types'
@@ -31,8 +31,10 @@ export default function RecurringSheet({ item, onClose }: { item: RecurringExpen
   const save = async () => {
     const v = numP(amount)
     if (!name.trim()) return setError('Indique a descrição.')
-    if (!(v > 0)) return setError('Indique um valor maior que zero.')
-    if (!nextDue) return setError('Indique o próximo vencimento.')
+    if (!(v > 0)) return setError('Indique um valor numérico maior que zero.')
+    if (!categories.some((c) => c.name === cat)) return setError('Escolha uma categoria activa.')
+    if (!validDate(nextDue)) return setError('Indique um próximo vencimento válido.')
+    if (sp.some((s) => !accounts.some((a) => a.id === s.account_id))) return setError('Escolha uma conta de pagamento activa.')
     const se = splitCheck(sp)
     if (se) return setError(se)
     const parts = toSplits(sp)

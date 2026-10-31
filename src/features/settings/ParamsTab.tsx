@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useUrlState } from '@/lib/urlState'
 import { useFarm } from '@/app/farm'
 import { numP } from '@/lib/format'
 import { errorMessage } from '@/lib/supabase'
@@ -45,8 +46,8 @@ function ParamSheet({ param, onClose }: { param: Parameter | null; onClose: () =
 export default function ParamsTab() {
   const { isOwner } = useFarm()
   const params = useParameters()
-  const [q, setQ] = useState('')
-  const [grp, setGrp] = useState('all')
+  const [q, setQ] = useUrlState('q', '')
+  const [grp, setGrp] = useUrlState('group', 'all')
   const [edit, setEdit] = useState<Parameter | null>(null)
 
   if (params.isLoading) return <Loading />

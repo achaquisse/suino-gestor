@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useUrlState } from '@/lib/urlState'
 import { useFarm } from '@/app/farm'
 import { money, numP } from '@/lib/format'
 import { errorMessage } from '@/lib/supabase'
@@ -62,8 +63,8 @@ export default function AccountsTab() {
   const balances = useAccountBalances()
   const { update } = useTableMutations('accounts')
   const toast = useToast()
-  const [q, setQ] = useState('')
-  const [kind, setKind] = useState('all')
+  const [q, setQ] = useUrlState('q', '')
+  const [kind, setKind] = useUrlState('kind', 'all')
   const [draft, setDraft] = useState<Draft | null>(null)
   const [off, setOff] = useState<Account | null>(null)
 

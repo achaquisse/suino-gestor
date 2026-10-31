@@ -66,7 +66,7 @@ export function BirthForm({ ctx, onBack, onClose }: FormProps) {
 
   const submit = () => run(async () => {
     if (!a) throw new Error('Escolha uma porca.')
-    if (live < 0 || dead < 0) throw new Error('Número inválido.')
+    if (!Number.isSafeInteger(live) || !Number.isSafeInteger(dead) || live < 0 || dead < 0 || live + dead === 0) throw new Error('Indique um número inteiro válido de leitões nascidos.')
     await rpc.mutateAsync({ p_sow: a.id, p_live: live, p_dead: dead, p_date: c.date, p_by: c.by })
     return `Parto registado · ${a.tag} · ${live} vivos${dead ? ` · ${dead} nados-mortos` : ''}`
   })

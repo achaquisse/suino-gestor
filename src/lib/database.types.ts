@@ -34,17 +34,26 @@ export type Task = {
 }
 export type StockItem = {
   id: string; farm_id: string; code: string; name: string; unit: string; qty: number; max_qty: number; low_qty: number
-  note: string; expires_on: string | null; category: string; unit_price: number | null; created_at: string
+  note: string; expires_on: string | null; category: string; unit_price: number | null; active: boolean; created_at: string
 }
+export type TreatmentProduct = {
+  id: string; farm_id: string; code: string; name: string; dose_ml: number | null; per_kg: number | null
+  dose_text: string; route: string; withdrawal_days: number; stock_code: string | null
+  help_kind: 'art' | 'pb'; help_slug: string; active: boolean; created_at: string
+}
+export type Breed = { id: string; farm_id: string; name: string; active: boolean; created_at: string }
+export type Symptom = { id: string; farm_id: string; name: string; icon: string; active: boolean; created_at: string }
 export type Account = { id: string; farm_id: string; name: string; kind: AccountKind; holder: string; initial_balance: number; color: string; active: boolean; created_at: string }
-export type Category = { id: string; farm_id: string; name: string; grp: CategoryGroup; color: string; description: string; active: boolean; created_at: string }
+export type Category = { id: string; farm_id: string; name: string; grp: CategoryGroup; color: string; description: string; item_type: 'Serviço' | 'Produto'; quantity_unit: string; baseline_price: number | null; active: boolean; created_at: string }
 export type Batch = {
   id: string; farm_id: string; code: string; phase: string; head_count: number; active: boolean
   opening_cost: number; opening_revenue: number; started_on: string | null; created_at: string
 }
 export type Transaction = {
   id: string; farm_id: string; tx_date: string; title: string; account_id: string; kind: TxKind; category: string; amount: number
-  batch_id: string | null; notes: string; source: string | null; source_id: string | null; created_by: string | null
+  quantity: number | null; quantity_unit: string | null; unit_price: number | null
+  batch_id: string | null; batch_ids: string[]; batch_allocations: Json; stock_quantity: number | null
+  notes: string; source: string | null; source_id: string | null; created_by: string | null
   created_by_name: string; created_at: string
 }
 export type TransactionFile = { id: string; farm_id: string; transaction_id: string; path: string; name: string; size_bytes: number; mime: string; created_at: string }
@@ -94,11 +103,14 @@ export type Database = {
       events: Table<FarmEvent, 'detail' | 'animal_id' | 'pen_id' | 'meta' | 'show_in_calendar' | 'created_by' | 'created_by_name'>
       weights: Table<Weight>
       tasks: Table<Task, 'location' | 'pen_id' | 'due_time' | 'assignee' | 'action' | 'done_at' | 'done_by'>
-      stock_items: Table<StockItem, 'unit' | 'qty' | 'max_qty' | 'low_qty' | 'note' | 'expires_on' | 'category' | 'unit_price'>
+      stock_items: Table<StockItem, 'unit' | 'qty' | 'max_qty' | 'low_qty' | 'note' | 'expires_on' | 'category' | 'unit_price' | 'active'>
+      treatment_products: Table<TreatmentProduct, 'dose_ml' | 'per_kg' | 'dose_text' | 'route' | 'withdrawal_days' | 'stock_code' | 'help_kind' | 'help_slug' | 'active'>
+      breeds: Table<Breed, 'active'>
+      symptoms: Table<Symptom, 'icon' | 'active'>
       accounts: Table<Account, 'holder' | 'initial_balance' | 'color' | 'active'>
-      categories: Table<Category, 'color' | 'description' | 'active'>
+      categories: Table<Category, 'color' | 'description' | 'item_type' | 'quantity_unit' | 'baseline_price' | 'active'>
       batches: Table<Batch, 'phase' | 'head_count' | 'active' | 'opening_cost' | 'opening_revenue' | 'started_on'>
-      transactions: Table<Transaction, 'batch_id' | 'notes' | 'source' | 'source_id' | 'created_by' | 'created_by_name'>
+      transactions: Table<Transaction, 'quantity' | 'quantity_unit' | 'unit_price' | 'batch_id' | 'batch_ids' | 'batch_allocations' | 'stock_quantity' | 'notes' | 'source' | 'source_id' | 'created_by' | 'created_by_name'>
       transaction_files: Table<TransactionFile, 'size_bytes' | 'mime'>
       recurring_expenses: Table<RecurringExpense, 'cost_type' | 'splits' | 'active'>
       debts: Table<Debt, 'description' | 'paid' | 'next_due' | 'splits'>

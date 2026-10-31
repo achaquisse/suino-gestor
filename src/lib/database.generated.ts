@@ -22,10 +22,16 @@ export type Database = {
         Update: { id?: string; farm_id?: string; code?: string; phase?: string; head_count?: number; active?: boolean; opening_cost?: number; opening_revenue?: number; started_on?: string | null; created_at?: string }
         Relationships: []
       }
+      breeds: {
+        Row: { id: string; farm_id: string; name: string; active: boolean; created_at: string }
+        Insert: { id?: string; farm_id: string; name: string; active?: boolean; created_at?: string }
+        Update: { id?: string; farm_id?: string; name?: string; active?: boolean; created_at?: string }
+        Relationships: []
+      }
       categories: {
-        Row: { id: string; farm_id: string; name: string; grp: string; color: string; description: string; active: boolean; created_at: string }
-        Insert: { id?: string; farm_id: string; name: string; grp: string; color?: string; description?: string; active?: boolean; created_at?: string }
-        Update: { id?: string; farm_id?: string; name?: string; grp?: string; color?: string; description?: string; active?: boolean; created_at?: string }
+        Row: { id: string; farm_id: string; name: string; grp: string; color: string; description: string; active: boolean; created_at: string; item_type: string; quantity_unit: string; baseline_price: number | null }
+        Insert: { id?: string; farm_id: string; name: string; grp: string; color?: string; description?: string; active?: boolean; created_at?: string; item_type?: string; quantity_unit?: string; baseline_price?: number | null }
+        Update: { id?: string; farm_id?: string; name?: string; grp?: string; color?: string; description?: string; active?: boolean; created_at?: string; item_type?: string; quantity_unit?: string; baseline_price?: number | null }
         Relationships: []
       }
       debts: {
@@ -89,9 +95,15 @@ export type Database = {
         Relationships: []
       }
       stock_items: {
-        Row: { id: string; farm_id: string; code: string; name: string; unit: string; qty: number; max_qty: number; low_qty: number; note: string; expires_on: string | null; category: string; unit_price: number | null; created_at: string }
-        Insert: { id?: string; farm_id: string; code: string; name: string; unit?: string; qty?: number; max_qty?: number; low_qty?: number; note?: string; expires_on?: string | null; category?: string; unit_price?: number | null; created_at?: string }
-        Update: { id?: string; farm_id?: string; code?: string; name?: string; unit?: string; qty?: number; max_qty?: number; low_qty?: number; note?: string; expires_on?: string | null; category?: string; unit_price?: number | null; created_at?: string }
+        Row: { id: string; farm_id: string; code: string; name: string; unit: string; qty: number; max_qty: number; low_qty: number; note: string; expires_on: string | null; category: string; unit_price: number | null; created_at: string; active: boolean }
+        Insert: { id?: string; farm_id: string; code: string; name: string; unit?: string; qty?: number; max_qty?: number; low_qty?: number; note?: string; expires_on?: string | null; category?: string; unit_price?: number | null; created_at?: string; active?: boolean }
+        Update: { id?: string; farm_id?: string; code?: string; name?: string; unit?: string; qty?: number; max_qty?: number; low_qty?: number; note?: string; expires_on?: string | null; category?: string; unit_price?: number | null; created_at?: string; active?: boolean }
+        Relationships: []
+      }
+      symptoms: {
+        Row: { id: string; farm_id: string; name: string; icon: string; active: boolean; created_at: string }
+        Insert: { id?: string; farm_id: string; name: string; icon?: string; active?: boolean; created_at?: string }
+        Update: { id?: string; farm_id?: string; name?: string; icon?: string; active?: boolean; created_at?: string }
         Relationships: []
       }
       tasks: {
@@ -107,9 +119,15 @@ export type Database = {
         Relationships: []
       }
       transactions: {
-        Row: { id: string; farm_id: string; tx_date: string; title: string; account_id: string; kind: string; category: string; amount: number; batch_id: string | null; notes: string; source: string | null; source_id: string | null; created_by: string | null; created_by_name: string; created_at: string }
-        Insert: { id?: string; farm_id: string; tx_date: string; title: string; account_id: string; kind: string; category: string; amount: number; batch_id?: string | null; notes?: string; source?: string | null; source_id?: string | null; created_by?: string | null; created_by_name?: string; created_at?: string }
-        Update: { id?: string; farm_id?: string; tx_date?: string; title?: string; account_id?: string; kind?: string; category?: string; amount?: number; batch_id?: string | null; notes?: string; source?: string | null; source_id?: string | null; created_by?: string | null; created_by_name?: string; created_at?: string }
+        Row: { id: string; farm_id: string; tx_date: string; title: string; account_id: string; kind: string; category: string; amount: number; batch_id: string | null; notes: string; source: string | null; source_id: string | null; created_by: string | null; created_by_name: string; created_at: string; quantity: number | null; quantity_unit: string | null; unit_price: number | null; batch_ids: string[]; batch_allocations: Json; stock_quantity: number | null }
+        Insert: { id?: string; farm_id: string; tx_date: string; title: string; account_id: string; kind: string; category: string; amount: number; batch_id?: string | null; notes?: string; source?: string | null; source_id?: string | null; created_by?: string | null; created_by_name?: string; created_at?: string; quantity?: number | null; quantity_unit?: string | null; unit_price?: number | null; batch_ids?: string[]; batch_allocations?: Json; stock_quantity?: number | null }
+        Update: { id?: string; farm_id?: string; tx_date?: string; title?: string; account_id?: string; kind?: string; category?: string; amount?: number; batch_id?: string | null; notes?: string; source?: string | null; source_id?: string | null; created_by?: string | null; created_by_name?: string; created_at?: string; quantity?: number | null; quantity_unit?: string | null; unit_price?: number | null; batch_ids?: string[]; batch_allocations?: Json; stock_quantity?: number | null }
+        Relationships: []
+      }
+      treatment_products: {
+        Row: { id: string; farm_id: string; code: string; name: string; dose_ml: number | null; per_kg: number | null; dose_text: string; route: string; withdrawal_days: number; stock_code: string | null; help_kind: string; help_slug: string; active: boolean; created_at: string }
+        Insert: { id?: string; farm_id: string; code: string; name: string; dose_ml?: number | null; per_kg?: number | null; dose_text?: string; route?: string; withdrawal_days?: number; stock_code?: string | null; help_kind?: string; help_slug?: string; active?: boolean; created_at?: string }
+        Update: { id?: string; farm_id?: string; code?: string; name?: string; dose_ml?: number | null; per_kg?: number | null; dose_text?: string; route?: string; withdrawal_days?: number; stock_code?: string | null; help_kind?: string; help_slug?: string; active?: boolean; created_at?: string }
         Relationships: []
       }
       weights: {

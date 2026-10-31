@@ -1,5 +1,5 @@
-import { useState } from 'react'
 import { Link } from 'react-router'
+import { useUrlState } from '@/lib/urlState'
 import { HCAT } from '@/lib/constants'
 import type { HelpCategory } from '@/lib/database.types'
 import { Button, Card, ErrorState, Icon, IconTile, Loading, Spinner, cx, useToast } from '@/ui'
@@ -10,8 +10,8 @@ type Filter = 'all' | HelpCategory
 
 export default function HelpPage() {
   const toast = useToast()
-  const [q, setQ] = useState('')
-  const [cat, setCat] = useState<Filter>('all')
+  const [q, setQ] = useUrlState('q', '')
+  const [cat, setCat] = useUrlState<Filter>('cat', 'all', ['all', ...HELP_CATS])
   useHelpLibrary()
   const search = useHelpSearch(q, cat === 'all' ? null : cat)
   const res = search.data

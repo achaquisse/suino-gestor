@@ -11,7 +11,14 @@ export const pctL = (v: number, t: number) => (t ? (v / t * 100).toFixed(1).repl
 export const kfmt = (v: number) => (Math.abs(v) >= 1000 ? (v / 1000).toFixed(1).replace('.', ',').replace(',0', '') + 'k' : fmt(v))
 export const dec = (v: number, digits = 1) => v.toFixed(digits).replace('.', ',')
 export const kg = (v: number) => (v < 10 ? dec(v) : String(Math.round(v))) + ' kg'
-export const numP = (v: string | number) => parseFloat(String(v).replace(/\s/g, '').replace(',', '.'))
+export const numP = (v: string | number) => {
+  const raw = String(v).trim()
+  const valid = /^[+-]?(?:(?:\d+|\d{1,3}(?:\s\d{3})+)(?:[.,]\d*)?|[.,]\d+)$/.test(raw)
+  const parsed = valid ? Number(raw.replace(/\s/g, '').replace(',', '.')) : NaN
+  return Number.isFinite(parsed) ? parsed : NaN
+}
+export const validDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value))
+  && new Date(value).toISOString().slice(0, 10) === value
 export const initials = (name: string) =>
   name.split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?'
 

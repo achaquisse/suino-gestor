@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { useAccounts, useBatches, useParam, useRpc, useStock } from '@/lib/queries'
+import { useAccounts, useBatches, useParam, useRpc } from '@/lib/queries'
 import { dec, money, numP } from '@/lib/format'
-import { Field, Input, Loading, Select } from '@/ui'
+import { Field, Input, Select } from '@/ui'
 import {
   AnimalSelect, CommonFields, FormSheet, LockedAnimal, firstId, scoped, useBase, useCommon, useSubmit, type FormProps,
 } from './shared'
@@ -18,14 +18,14 @@ export function SaleForm({ ctx, onBack, onClose }: FormProps) {
   const initial = firstId(ctx, list)
   const [animal, setAnimal] = useState(initial)
   const [kgText, setKgText] = useState(() => String(animals.find((a) => a.id === initial)?.weight_kg ?? '').replace('.', ','))
-  const [priceText, setPriceText] = useState(String(defaultPrice).replace('.', ','))
+  const [priceText, setPriceText] = useState<string | null>(null)
   const [buyer, setBuyer] = useState('')
   const [account, setAccount] = useState('')
   const [batch, setBatch] = useState('')
   const a = animals.find((x) => x.id === animal)
   const acct = account || accounts[0]?.id || ''
   const kgV = numP(kgText)
-  const pr = numP(priceText)
+  const pr = numP(priceText ?? defaultPrice)
   const total = kgV > 0 && pr > 0 ? Math.round(kgV * pr) : 0
   const blocked = !!a?.withdrawal_until && a.withdrawal_until >= c.date
 
@@ -40,7 +40,8 @@ export function SaleForm({ ctx, onBack, onClose }: FormProps) {
     if (!(kgV > 0)) throw new Error('Indique o peso vivo.')
     if (!(pr > 0)) throw new Error('Indique o preço por kg.')
     if (blocked) throw new Error('Animal em período de carência · venda bloqueada.')
-    if (!acct) throw new Error('Escolha a conta de recebimento.')
+    if (!accounts.some((x) => x.id === acct)) throw new Error('Escolha uma conta de recebimento activa.')
+    if (batch && !batches.some((b) => b.id === batch)) throw new Error('Escolha um lote activo.')
     await rpc.mutateAsync({
       p_animal: a.id, p_kg: kgV, p_price_per_kg: pr, p_buyer: buyer.trim(), p_account: acct, p_batch: batch || undefined, p_date: c.date, p_by: c.by,
     })
@@ -57,7 +58,7 @@ export function SaleForm({ ctx, onBack, onClose }: FormProps) {
           <Input value={kgText} onChange={(e) => setKgText(e.target.value)} inputMode="decimal" className="tabular" />
         </Field>
         <Field label="Preço por kg (MT)">
-          <Input value={priceText} onChange={(e) => setPriceText(e.target.value)} inputMode="decimal" className="tabular" />
+          <Input value={priceText ?? String(defaultPrice).replace('.', ',')} onChange={(e) => setPriceText(e.target.value)} inputMode="decimal" className="tabular" />
         </Field>
       </div>
       <Field label="Comprador"><Input value={buyer} onChange={(e) => setBuyer(e.target.value)} placeholder="Opcional" /></Field>
@@ -79,65 +80,6 @@ export function SaleForm({ ctx, onBack, onClose }: FormProps) {
         <div className="tabular text-xl font-semibold text-success">{total ? `+${money(total)}` : '—'}</div>
       </div>
       <CommonFields c={c} byLabel="Vendido por" />
-    </FormSheet>
-  )
-}
-
-export function PurchaseForm({ ctx, onBack, onClose }: FormProps) {
-  const stockQ = useStock()
-  const accountsQ = useAccounts()
-  const c = useCommon(ctx)
-  const rpc = useRpc('log_stock_purchase')
-  const { pending, error, run } = useSubmit(ctx, onClose)
-  const stock = stockQ.data ?? []
-  const accounts = (accountsQ.data ?? []).filter((a) => a.active)
-  const [item, setItem] = useState('')
-  const [qtyText, setQtyText] = useState('')
-  const [priceText, setPriceText] = useState('')
-  const [supplier, setSupplier] = useState('')
-  const [account, setAccount] = useState('')
-  if (stockQ.isPending || accountsQ.isPending) return <FormSheet title="Compra" onBack={onBack} onClose={onClose} pending={false} error={null} onSubmit={() => {}}><Loading /></FormSheet>
-
-  const itemId = item || stock.find((s) => s.code === ctx.stockCode)?.id || stock[0]?.id || ''
-  const it = stock.find((s) => s.id === itemId)
-  const acct = account || accounts[0]?.id || ''
-  const qty = numP(qtyText)
-  const price = priceText ? numP(priceText) : 0
-
-  const submit = () => run(async () => {
-    if (!it) throw new Error('Escolha um artigo.')
-    if (!(qty > 0)) throw new Error('Indique a quantidade.')
-    if (priceText && !(price >= 0)) throw new Error('Preço inválido.')
-    if (price > 0 && !acct) throw new Error('Escolha a conta de pagamento.')
-    await rpc.mutateAsync({ p_item: it.id, p_qty: qty, p_price: price, p_supplier: supplier.trim(), p_account: acct, p_date: c.date, p_by: c.by })
-    return `Compra registada · ${it.name} ${it.qty} → ${it.qty + qty} ${it.unit}`
-  })
-
-  return (
-    <FormSheet title="Compra" onBack={onBack} onClose={onClose} pending={pending} error={error} onSubmit={submit}
-      effect="Aumenta o stock e regista a despesa na conta de pagamento.">
-      <Field label="Artigo" hint={it ? `Em stock: ${it.qty} ${it.unit}` : undefined}>
-        <Select value={itemId} onChange={(e) => setItem(e.target.value)}>
-          {stock.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </Select>
-      </Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label={`Quantidade${it ? ` (${it.unit})` : ''}`}>
-          <Input value={qtyText} onChange={(e) => setQtyText(e.target.value)} inputMode="decimal" placeholder="0" className="tabular" />
-        </Field>
-        <Field label="Preço total (MT)">
-          <Input value={priceText} onChange={(e) => setPriceText(e.target.value)} inputMode="decimal" placeholder="0" className="tabular" />
-        </Field>
-      </div>
-      <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
-        <Field label="Fornecedor"><Input value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="Opcional" /></Field>
-        <Field label="Conta">
-          <Select value={acct} onChange={(e) => setAccount(e.target.value)}>
-            {accounts.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
-          </Select>
-        </Field>
-      </div>
-      <CommonFields c={c} byLabel="Registado por" />
     </FormSheet>
   )
 }

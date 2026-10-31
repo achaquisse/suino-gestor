@@ -1,5 +1,5 @@
-import { useState } from 'react'
 import { Card, Icon, Pager, Progress, usePaged } from '@/ui'
+import { setUrlParams, useUrlParams } from '@/lib/urlState'
 import { GREEN, MUTED, RED } from '@/lib/constants'
 import type { BatchResult } from '@/lib/database.types'
 import { fmt, sgn } from '@/lib/format'
@@ -7,10 +7,10 @@ import { fmt, sgn } from '@/lib/format'
 const grid = 'grid grid-cols-[1.3fr_1fr_0.6fr_1fr_1fr_1fr_1.3fr] gap-3 px-5'
 
 export function Batches({ rows }: { rows: BatchResult[] }) {
-  const [q, setQ] = useState('')
+  const q = useUrlParams().get('batchQ') ?? ''
   const lq = q.trim().toLowerCase()
   const list = rows.filter((l) => !lq || `${l.code} ${l.phase}`.toLowerCase().includes(lq))
-  const { rows: pageRows, pager } = usePaged(list, 5)
+  const { rows: pageRows, pager } = usePaged(list, 5, 'batch')
 
   return (
     <Card className="overflow-hidden">
@@ -21,7 +21,7 @@ export function Batches({ rows }: { rows: BatchResult[] }) {
         </div>
         <label className="flex h-11 w-60 max-w-full items-center gap-2 rounded-xl border border-line-strong bg-white px-3">
           <Icon name="search" size={18} className="text-faint" />
-          <input value={q} onChange={(e) => { setQ(e.target.value); pager.setPage(1) }} placeholder="Pesquisar lote ou fase" className="min-w-0 flex-1 border-0 bg-transparent text-sm outline-none" />
+          <input value={q} onChange={(e) => setUrlParams({ batchQ: e.target.value, batchPage: null })} placeholder="Pesquisar lote ou fase" className="min-w-0 flex-1 border-0 bg-transparent text-sm outline-none" />
         </label>
       </div>
       <div className="overflow-x-auto">

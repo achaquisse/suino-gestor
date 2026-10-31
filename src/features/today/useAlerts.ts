@@ -61,6 +61,7 @@ export function useAlerts() {
       })
     }
     for (const s of stock ?? []) {
+      if (!s.active) continue
       const low = s.qty <= s.low_qty
       const exp = s.expires_on ? daysBetween(today, s.expires_on) : null
       const expiring = exp !== null && exp <= notice

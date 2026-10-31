@@ -6,12 +6,12 @@ import { useAnimals, usePens } from '@/lib/queries'
 import { Empty, ErrorState, Icon, Loading, Sheet } from '@/ui'
 import { IllnessForm, TreatmentForm, WeightForm } from './HealthForms'
 import { ActivityForm, BirthForm, DeathForm, MatingForm, TransferForm } from './HerdForms'
-import { PurchaseForm, SaleForm } from './MoneyForms'
+import { SaleForm } from './MoneyForms'
 import type { FormProps } from './shared'
 
 const FORMS: Partial<Record<LogType, ComponentType<FormProps>>> = {
   treatment: TreatmentForm, illness: IllnessForm, weight: WeightForm, transfer: TransferForm, birth: BirthForm,
-  mating: MatingForm, death: DeathForm, sale: SaleForm, purchase: PurchaseForm, activity: ActivityForm,
+  mating: MatingForm, death: DeathForm, sale: SaleForm, activity: ActivityForm,
 }
 const MONEY: LogType[] = ['sale', 'purchase', 'expense']
 
@@ -23,7 +23,7 @@ export default function QuickLogSheet({ type, ctx }: { type: LogType | 'menu'; c
   const animals = useAnimals()
 
   const pick = (t: LogType) => {
-    if (t === 'buyAnimals' || t === 'expense') return openLog(t, ctx)
+    if (t === 'buyAnimals' || t === 'expense' || t === 'purchase') return openLog(t, ctx)
     setCurrent(t)
   }
 

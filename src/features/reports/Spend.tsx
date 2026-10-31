@@ -1,5 +1,5 @@
-import { useState } from 'react'
 import { Card, cx, Icon } from '@/ui'
+import { setUrlParams, useUrlParams } from '@/lib/urlState'
 import { INK, MUTED } from '@/lib/constants'
 import type { Account, Transaction } from '@/lib/database.types'
 import { fmt, kfmt, pctL } from '@/lib/format'
@@ -8,9 +8,14 @@ import { acctColor, type Bucket } from './model'
 export function Spend({ scope, accts, all, buckets, weekly, F, T }: {
   scope: Account[]; accts: Account[]; all: Transaction[]; buckets: Bucket[]; weekly: boolean; F: string; T: string
 }) {
-  const [stack, setStack] = useState(true)
-  const [hidden, setHidden] = useState<string[]>([])
-  const [sel, setSel] = useState<number | null>(null)
+  const params = useUrlParams()
+  const stack = params.get('stack') !== '0'
+  const setStack = (v: boolean) => setUrlParams({ stack: v ? null : '0' })
+  const hidden = params.get('hide')?.split(',').filter(Boolean) ?? []
+  const setHidden = (ids: string[]) => setUrlParams({ hide: ids.join(',') })
+  const selRaw = params.get('bucket')
+  const sel = selRaw != null && /^\d+$/.test(selRaw) ? +selRaw : null
+  const setSel = (i: number) => setUrlParams({ bucket: i })
   const vis = scope.filter((a) => !hidden.includes(a.id))
   const exp = (id: string, lo: string, hi: string) =>
     -all.filter((t) => t.account_id === id && t.amount < 0 && t.tx_date >= lo && t.tx_date <= hi).reduce((s, t) => s + t.amount, 0)

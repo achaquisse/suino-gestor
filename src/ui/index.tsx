@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom'
 import { Link } from 'react-router'
 import { TONE } from '@/lib/constants'
 import type { Tone } from '@/lib/database.types'
+import { setUrlParams, useUrlNumber } from '@/lib/urlState'
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ')
 
@@ -366,14 +367,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 export const useToast = () => use(ToastContext)
 
 /* ---------------------------------------------------------------- Pager */
-export function usePaged<T>(rows: T[], initialPer = 25) {
-  const [page, setPage] = useState(1)
-  const [per, setPer] = useState(initialPer)
+export const pageKeys = (ns = '') => (ns ? { page: `${ns}Page`, per: `${ns}Per` } : { page: 'page', per: 'per' })
+
+export function usePaged<T>(rows: T[], initialPer = 25, ns = '') {
+  const keys = pageKeys(ns)
+  const [page, setPage] = useUrlNumber(keys.page, 1)
+  const [per] = useUrlNumber(keys.per, initialPer)
   const pages = Math.max(1, Math.ceil(rows.length / per))
   const cur = Math.min(page, pages)
   return {
     rows: rows.slice((cur - 1) * per, cur * per),
-    pager: { page: cur, pages, per, total: rows.length, setPage, setPer: (n: number) => { setPer(n); setPage(1) } },
+    pager: { page: cur, pages, per, total: rows.length, setPage, setPer: (n: number) => setUrlParams({ [keys.per]: n === initialPer ? null : n, [keys.page]: null }) },
     reset: () => setPage(1),
   }
 }

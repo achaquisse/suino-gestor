@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { dLong, fmt, numP, todayISO } from '@/lib/format'
+import { dLong, fmt, numP, todayISO, validDate } from '@/lib/format'
 import { useRpc } from '@/lib/queries'
 import { errorMessage } from '@/lib/supabase'
 import type { Debt, RecurringExpense } from '@/lib/database.types'
@@ -27,7 +27,7 @@ export function PayRecurringSheet({ item, lookups, onClose }: { item: RecurringE
   const fixed = item.cost_type === 'Fixo'
 
   const submit = async () => {
-    if (!date) return setError('Indique a data.')
+    if (!validDate(date)) return setError('Indique uma data válida.')
     try {
       await pay.mutateAsync({ p_id: item.id, p_date: date } as never)
       toast(`Pagamento confirmado · −${fmt(item.amount)} MT · ${splitLabel(splitsOf(item), lookups.accountName)}`)
@@ -65,8 +65,9 @@ export function PayDebtSheet({ item, lookups, onClose }: { item: Debt; lookups: 
 
   const submit = async () => {
     const v = numP(amount)
-    if (!(v > 0)) return setError('Indique o valor pago.')
-    if (!date) return setError('Indique a data.')
+    if (!(v > 0)) return setError('Indique um valor pago numérico maior que zero.')
+    if (v > rem) return setError('O valor pago não pode exceder o valor em dívida.')
+    if (!validDate(date)) return setError('Indique uma data válida.')
     try {
       await pay.mutateAsync({ p_id: item.id, p_amount: v, p_date: date } as never)
       toast(`Pagamento confirmado · −${fmt(Math.min(v, rem))} MT · ${splitLabel(splitsOf(item), lookups.accountName)}`)

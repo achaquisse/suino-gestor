@@ -59,9 +59,9 @@ export function CommonFields({ c, byLabel }: { c: Common; byLabel: string }) {
   const { user } = useFarm()
   return (
     <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
-      <Field label="Data"><Input type="date" value={c.date} onChange={(e) => c.setDate(e.target.value)} /></Field>
+      <Field label="Data"><Input type="date" required value={c.date} onChange={(e) => c.setDate(e.target.value)} /></Field>
       <Field label={byLabel}>
-        <Select value={c.by} onChange={(e) => c.setBy(e.target.value)}>
+        <Select required value={c.by} onChange={(e) => c.setBy(e.target.value)}>
           {c.team.map((n) => <option key={n} value={n}>{n}{n === user.name ? ' (eu)' : ''}</option>)}
         </Select>
       </Field>

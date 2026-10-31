@@ -6,12 +6,11 @@ import { Button, Field, FormError, Icon, Input, Loading, Segmented, Select, Shee
 import { STAGES } from '@/lib/constants'
 import type { Sex, Stage } from '@/lib/database.types'
 import { errorMessage, supabase } from '@/lib/supabase'
-import { signedUrl, storageSafeName, useAccounts, useAnimals, usePens, useRpc, useTableMutations, useTeamNames } from '@/lib/queries'
-import { dShort, numP, plural, todayISO } from '@/lib/format'
+import { signedUrl, storageSafeName, useAccounts, useAnimals, useBreeds, usePens, useRpc, useTableMutations, useTeamNames } from '@/lib/queries'
+import { dShort, numP, plural, todayISO, validDate } from '@/lib/format'
 
 type Props = { mode: 'buy' | 'edit'; animalId?: string; penId?: string; onClose: () => void }
 
-const BASE_BREEDS = ['Landrace', 'Large White', 'Duroc', 'Pietrain', 'Landrace × Large White', 'Landrace × Duroc', 'Large White × Duroc']
 const TAG_RE = /^[A-Z0-9][A-Z0-9-]*$/
 
 export default function AnimalModal({ mode, animalId, penId, onClose }: Props) {
@@ -29,12 +28,14 @@ function BuyForm({ penId, onClose }: { penId?: string; onClose: () => void }) {
   const pens = usePens()
   const animals = useAnimals()
   const accounts = useAccounts()
+  const breedsQ = useBreeds()
+  const breeds = (breedsQ.data ?? []).filter((b) => b.active)
   const team = useTeamNames()
   const buy = useRpc('buy_animals')
   const [qty, setQty] = useState('10')
   const [stage, setStage] = useState<Stage>('Desmamado')
   const [sex, setSex] = useState<'Fêmea' | 'Macho' | 'Misto'>('Misto')
-  const [breed, setBreed] = useState('Landrace × Duroc')
+  const [breed, setBreed] = useState('')
   const [kg, setKg] = useState('')
   const [pen, setPen] = useState(penId ?? '')
   const [born, setBorn] = useState('')
@@ -45,7 +46,7 @@ function BuyForm({ penId, onClose }: { penId?: string; onClose: () => void }) {
   const [by, setBy] = useState(user.name)
   const [error, setError] = useState<string | null>(null)
 
-  const loading = pens.isPending || animals.isPending || accounts.isPending
+  const loading = pens.isPending || animals.isPending || accounts.isPending || breedsQ.isPending
   const penList = pens.data ?? []
   const free = (id: string) => {
     const p = penList.find((x) => x.id === id)
@@ -54,23 +55,26 @@ function BuyForm({ penId, onClose }: { penId?: string; onClose: () => void }) {
   const accs = accounts.data ?? []
   const accountId = account || accs[0]?.id || ''
   const penId2 = pen || penList[0]?.id || ''
-  const n = Math.round(numP(qty)) || 0
-  const total = numP(price) || 0
+  const n = numP(qty)
+  const total = numP(price)
   const names = [user.name, ...team.filter((t) => t !== user.name)]
 
   const save = async () => {
     const penRow = penList.find((p) => p.id === penId2)
-    if (!n || n < 1) return setError('Indique a quantidade de animais.')
+    if (!Number.isSafeInteger(n) || n < 1) return setError('Indique uma quantidade inteira de animais maior que zero.')
     if (!penRow) return setError('Escolha o curral.')
+    if (!breeds.some((b) => b.name === (breed || breeds[0]?.name))) return setError('Escolha uma raça activa nas definições.')
     if (n > free(penId2)) return setError(`${penRow.name} só tem ${plural(free(penId2), 'lugar livre', 'lugares livres')}.`)
     if (!(numP(kg) > 0)) return setError('Indique o peso médio.')
     if (!(total > 0)) return setError('Indique o valor total da compra.')
-    if (!accountId) return setError('Escolha a conta de pagamento.')
-    if (!date) return setError('Indique a data da compra.')
+    if (!accs.some((a) => a.id === accountId && a.active)) return setError('Escolha uma conta de pagamento activa.')
+    if (!validDate(date)) return setError('Indique uma data de compra válida.')
+    if (born && (!validDate(born) || born > date)) return setError('Indique uma data de nascimento válida, anterior à compra.')
+    if (!by.trim()) return setError('Indique o responsável pela compra.')
     setError(null)
     try {
       await buy.mutateAsync({
-        p_qty: n, p_stage: stage, p_sex: sex, p_breed: breed, p_kg: numP(kg), p_pen: penId2,
+        p_qty: n, p_stage: stage, p_sex: sex, p_breed: breed || breeds[0].name, p_kg: numP(kg), p_pen: penId2,
         p_born: (born || null) as unknown as string, p_supplier: supplier.trim(), p_price: total, p_account: accountId, p_date: date, p_by: by,
       })
       toast(`${plural(n, 'animal registado', 'animais registados')} · ${penRow.name}`)
@@ -91,6 +95,10 @@ function BuyForm({ penId, onClose }: { penId?: string; onClose: () => void }) {
         <FormError>Crie primeiro um curral nas definições.</FormError>
       ) : !accs.length ? (
         <FormError>Crie primeiro uma conta de pagamento nas definições.</FormError>
+      ) : breedsQ.error ? (
+        <FormError>Não foi possível carregar as raças.</FormError>
+      ) : !breeds.length ? (
+        <FormError>Configure raças nas definições antes de registar animais.</FormError>
       ) : (
         <div className="flex flex-col gap-3.5">
           <Row>
@@ -104,7 +112,7 @@ function BuyForm({ penId, onClose }: { penId?: string; onClose: () => void }) {
           </Field>
           <Row>
             <Field label="Raça">
-              <Select value={breed} onChange={(e) => setBreed(e.target.value)}>{BASE_BREEDS.map((b) => <option key={b}>{b}</option>)}</Select>
+              <Select value={breed || breeds[0]?.name || ''} onChange={(e) => setBreed(e.target.value)}>{breeds.map((b) => <option key={b.id} value={b.name}>{b.name}</option>)}</Select>
             </Field>
             <Field label="Peso médio (kg)"><Input inputMode="decimal" value={kg} onChange={(e) => setKg(e.target.value)} placeholder="ex. 12" /></Field>
           </Row>
@@ -148,6 +156,7 @@ function EditForm({ animalId, onClose }: { animalId?: string; onClose: () => voi
   const { farmId } = useFarm()
   const animals = useAnimals()
   const pens = usePens()
+  const breedsQ = useBreeds()
   const { update } = useTableMutations('animals')
   const animal = animals.data?.find((a) => a.id === animalId)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -161,7 +170,7 @@ function EditForm({ animalId, onClose }: { animalId?: string; onClose: () => voi
   const f = draft ?? (animal ? { tag: animal.tag, sex: animal.sex, stage: animal.stage, breed: animal.breed, born: animal.born_on ?? '', notes: animal.notes } : null)
   const patch = (p: Partial<NonNullable<typeof f>>) => f && setDraft({ ...f, ...p })
   const penName = pens.data?.find((p) => p.id === animal?.pen_id)?.name ?? '—'
-  const breeds = [...new Set([...BASE_BREEDS, ...(animals.data ?? []).map((a) => a.breed).filter(Boolean)])]
+  const breeds = [...new Set([...(breedsQ.data ?? []).filter((b) => b.active).map((b) => b.name), animal?.breed].filter((b): b is string => !!b))]
 
   const pick = (fl: File | undefined) => {
     if (!fl) return
@@ -211,7 +220,7 @@ function EditForm({ animalId, onClose }: { animalId?: string; onClose: () => voi
   return (
     <Sheet open onClose={onClose} title="Editar animal" maxWidth={520}
       footer={animal ? <><Button className="flex-1" onClick={onClose}>Cancelar</Button><Button className="flex-[2]" variant="primary" loading={busy} onClick={save}>Guardar alterações</Button></> : undefined}>
-      {animals.isPending || pens.isPending ? <Loading /> : !animal || !f ? (
+      {animals.isPending || pens.isPending || breedsQ.isPending ? <Loading /> : !animal || !f ? (
         <FormError>Animal não encontrado.</FormError>
       ) : (
         <div className="flex flex-col gap-3.5">

@@ -17,6 +17,8 @@ export type LogContext = {
 export type FinPreset = {
   type?: 'Despesa' | 'Receita' | 'Aporte' | 'Investimento'
   category?: string
+  purchase?: boolean
+  stockCode?: string
 }
 
 export type Overlay =
@@ -47,7 +49,9 @@ export function OverlayProvider({ children }: { children: ReactNode }) {
     setOverlay,
     openLog: (type = 'menu', ctx) => {
       if (type === 'buyAnimals') return setOverlay({ kind: 'animal', mode: 'buy', penId: ctx?.penId })
-      if (type === 'expense') return setOverlay({ kind: 'fin', preset: { type: 'Despesa', category: 'Ração' } })
+      if (type === 'expense' || type === 'purchase') return setOverlay({ kind: 'fin', preset: {
+        type: 'Despesa', category: type === 'purchase' ? 'Ração' : undefined, purchase: type === 'purchase', stockCode: ctx?.stockCode,
+      } })
       setOverlay({ kind: 'log', type, ctx })
     },
     openFin: (preset) => setOverlay({ kind: 'fin', preset }),

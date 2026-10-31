@@ -1,6 +1,7 @@
-import { useState } from 'react'
 import { Card, cx, Dot, Icon, Progress } from '@/ui'
-import { CATC, GREEN, INK, MUTED, RED } from '@/lib/constants'
+import { setUrlParams, useUrlNumber, useUrlParams } from '@/lib/urlState'
+import { GREEN, INK, MUTED, RED } from '@/lib/constants'
+import { useCategories } from '@/lib/queries'
 import type { Account, AccountBalance, Transaction } from '@/lib/database.types'
 import { dShort, fmt, pctL, sgn } from '@/lib/format'
 import { acctColor } from './model'
@@ -10,8 +11,10 @@ const PER = 6
 export function AccountDetail({ scope, accts, balances, all, F, T, totalSpend }: {
   scope: Account[]; accts: Account[]; balances: AccountBalance[]; all: Transaction[]; F: string; T: string; totalSpend: number
 }) {
-  const [invId, setInvId] = useState<string | null>(null)
-  const [page, setPage] = useState(1)
+  const invId = useUrlParams().get('acc')
+  const [page, setPage] = useUrlNumber('accPage', 1)
+  const categoryColors = new Map((useCategories().data ?? []).map((c) => [c.name, c.color]))
+  const color = (name: string) => categoryColors.get(name) ?? MUTED
   const cur = scope.find((a) => a.id === invId) ?? scope[0]
   if (!cur) return null
   const tx = all.filter((t) => t.account_id === cur.id && t.tx_date >= F && t.tx_date <= T)
@@ -44,7 +47,7 @@ export function AccountDetail({ scope, accts, balances, all, F, T, totalSpend }:
           {scope.map((a) => {
             const on = a.id === cur.id
             return (
-              <button key={a.id} type="button" onClick={() => { setInvId(a.id); setPage(1) }}
+              <button key={a.id} type="button" onClick={() => setUrlParams({ acc: a.id, accPage: null })}
                 className={cx('flex h-[34px] items-center gap-1.5 rounded-full border px-3 text-[13px] font-semibold', on ? 'border-[#C9C2FB] bg-[#EEECFE] text-accent-strong' : 'border-line-strong bg-white text-ink-2')}>
                 <Dot color={acctColor(accts, a.id)} />{a.name}
               </button>
@@ -68,12 +71,12 @@ export function AccountDetail({ scope, accts, balances, all, F, T, totalSpend }:
           {icl.map(([c, v]) => (
             <div key={c} className="flex flex-col gap-[5px]">
               <div className="flex items-center gap-2 text-[13px]">
-                <Dot color={CATC[c] ?? MUTED} size={9} />
+                <Dot color={color(c)} size={9} />
                 <span className="flex-1">{c}</span>
                 <span className="tabular font-semibold">{fmt(v)}</span>
                 <span className="w-11 text-right text-muted">{pctL(v, out)}</span>
               </div>
-              <Progress value={(v / icl[0][1]) * 100} color={CATC[c] ?? MUTED} />
+              <Progress value={(v / icl[0][1]) * 100} color={color(c)} />
             </div>
           ))}
         </div>
@@ -82,7 +85,7 @@ export function AccountDetail({ scope, accts, balances, all, F, T, totalSpend }:
           {!sorted.length && <div className="border-t border-divider p-4 text-sm text-muted">Sem movimentos no período.</div>}
           {recent.map((t) => (
             <div key={t.id} className="flex items-center gap-2.5 border-t border-divider px-4 py-2.5">
-              <Dot color={CATC[t.category] ?? MUTED} />
+              <Dot color={color(t.category)} />
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-sm">{t.title}</span>
                 <span className="text-xs text-muted">{dShort(t.tx_date)} · {t.category}</span>

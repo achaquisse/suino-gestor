@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
+import { useUrlState } from '@/lib/urlState'
 import { useQuery } from '@tanstack/react-query'
 import { useFarm } from '@/app/farm'
 import { useOverlays } from '@/app/overlays'
@@ -13,6 +14,7 @@ import { HelpBtn, useHerd } from './parts'
 
 const TLT: Record<'all' | 'health' | 'breeding' | 'task', string> = { all: 'Todos', health: 'Saúde', breeding: 'Reprodução', task: 'Maneio' }
 type Tab = 'resumo' | 'repro' | 'hist'
+const TABS: Tab[] = ['resumo', 'repro', 'hist']
 
 const liveOf = (e: FarmEvent) => {
   const meta = e.meta as { [k: string]: Json | undefined } | null
@@ -40,8 +42,8 @@ export default function AnimalPage() {
   const weightsQ = useWeights(animal?.id)
   const gestation = useParam('gestation_days', 114)
   const weaning = useParam('weaning_age_days', 21)
-  const [tab, setTab] = useState<Tab>('resumo')
-  const [tl, setTl] = useState<keyof typeof TLT>('all')
+  const [tab, setTab] = useUrlState<Tab>('tab', 'resumo', TABS)
+  const [tl, setTl] = useUrlState<keyof typeof TLT>('kind', 'all', Object.keys(TLT) as (keyof typeof TLT)[])
 
   const events = useMemo(() => eventsQ.data ?? [], [eventsQ.data])
   const weights = useMemo(() => weightsQ.data ?? [], [weightsQ.data])
@@ -62,7 +64,7 @@ export default function AnimalPage() {
   const siblings = animal.pen_id ? herd.list.filter((a) => a.pen_id === animal.pen_id) : []
   const idx = siblings.findIndex((a) => a.id === animal.id)
   const penName = ha?.penName ?? herd.pens.data?.find((p) => p.id === animal.pen_id)?.name ?? '—'
-  const go = (i: number) => nav(`/herd/animals/${encodeURIComponent(siblings[(i + siblings.length) % siblings.length].tag)}`)
+  const go = (i: number) => nav({ pathname: `/herd/animals/${encodeURIComponent(siblings[(i + siblings.length) % siblings.length].tag)}`, search: window.location.search })
   const tabs: (readonly [Tab, string, string])[] = [['resumo', 'Resumo', 'badge'], ...(sow ? [['repro', 'Reprodução', 'favorite'] as const] : []), ['hist', 'Histórico', 'history']]
   const curTab = tabs.some((t) => t[0] === tab) ? tab : 'resumo'
   const histTabs = tabs.map(([v, l, i]) => [v, v === 'hist' && events.length ? `${l} · ${events.length}` : l, i] as const)

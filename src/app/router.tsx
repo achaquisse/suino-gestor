@@ -1,5 +1,6 @@
 import { createBrowserRouter, Outlet } from 'react-router'
 import { ErrorState, Loading } from '@/ui'
+import { bindRouter } from '@/lib/urlState'
 import { useAuth } from './auth'
 import { FarmProvider, useMemberships } from './farm'
 import { OverlayProvider } from './overlays'
@@ -59,3 +60,5 @@ export const router = createBrowserRouter([
     ],
   },
 ])
+
+bindRouter(router)

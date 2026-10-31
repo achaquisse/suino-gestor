@@ -78,11 +78,15 @@ export const useTasks = (from?: string, to?: string) =>
   })
 export const useStock = () =>
   useFarmQuery(['stock'], async (f) => num(await selectAll('stock_items', f, { column: 'name' }), ['qty', 'max_qty', 'low_qty', 'unit_price']))
+export const useTreatmentProducts = () =>
+  useFarmQuery(['treatment_products'], async (f) => num(await selectAll('treatment_products', f, { column: 'created_at' }), ['dose_ml', 'per_kg']))
+export const useBreeds = () => useFarmQuery(['breeds'], (f) => selectAll('breeds', f, { column: 'name' }))
+export const useSymptoms = () => useFarmQuery(['symptoms'], (f) => selectAll('symptoms', f, { column: 'created_at' }))
 export const useAccounts = () =>
   useFarmQuery(['accounts'], async (f) => num(await selectAll('accounts', f, { column: 'created_at' }), ['initial_balance']))
 export const useAccountBalances = (enabled = true) =>
   useFarmQuery(['account_balances'], async (f) => num(await selectAll('account_balances', f), ['initial_balance', 'balance']), enabled)
-export const useCategories = () => useFarmQuery(['categories'], (f) => selectAll('categories', f, { column: 'created_at' }))
+export const useCategories = () => useFarmQuery(['categories'], async (f) => num(await selectAll('categories', f, { column: 'created_at' }), ['baseline_price']))
 export const useBatches = (enabled = true) =>
   useFarmQuery(['batches'], async (f) => num(await selectAll('batches', f, { column: 'started_on', ascending: false }), ['opening_cost', 'opening_revenue']), enabled)
 export const useBatchResults = (enabled = true) =>
@@ -92,7 +96,7 @@ export const useTransactions = (enabled = true) =>
     const { data, error } = await supabase.from('transactions').select('*').eq('farm_id', f)
       .order('tx_date', { ascending: false }).order('created_at', { ascending: false })
     if (error) throw error
-    return num(data ?? [], ['amount'])
+    return num(data ?? [], ['amount', 'quantity', 'unit_price'])
   }, enabled)
 export const useTransactionFiles = (txId: string | undefined) =>
   useFarmQuery(['transaction_files', txId], async () => {
@@ -188,13 +192,31 @@ export function useCreateTransaction() {
   return useMutation({
     mutationFn: async (t: {
       tx_date: string; title: string; kind: Database['public']['Tables']['transactions']['Row']['kind']; category: string
-      amount: number; batch_id?: string | null; notes?: string; splits: Split[]; files?: File[]
+      amount: number; quantity?: number | null; quantity_unit?: string | null; unit_price?: number | null
+      batch_id?: string | null; batch_ids?: string[]; batch_allocations?: { batch_id: string; amount: number }[]
+      stock_id?: string | null; notes?: string; splits: Split[]; files?: File[]
     }) => {
       const parts = splitAmounts(t.splits, t.amount)
-      const rows = parts.map((p) => ({
-        farm_id: farmId, tx_date: t.tx_date, title: t.title, kind: t.kind, category: t.category, amount: p.amount,
-        account_id: p.account_id, batch_id: t.batch_id ?? null, notes: t.notes ?? '', created_by_name: user.name,
-      }))
+      const allocations = t.batch_allocations ?? []
+      const allocationParts = allocations.slice(0, -1).map((a) => splitAmounts(t.splits, a.amount))
+      let remaining = t.quantity ?? 0
+      const rows = parts.map((p, i) => {
+        const quantity = t.quantity == null ? null : i === parts.length - 1 ? Math.round(remaining * 1000) / 1000 : Math.round(t.quantity * p.pct * 10) / 1000
+        remaining -= quantity ?? 0
+        return {
+          farm_id: farmId, tx_date: t.tx_date, title: t.title, kind: t.kind, category: t.category, amount: p.amount,
+          quantity: quantity && quantity > 0 ? quantity : null, quantity_unit: quantity && quantity > 0 ? t.quantity_unit ?? null : null,
+          unit_price: quantity && quantity > 0 ? t.unit_price ?? null : null,
+          account_id: p.account_id, batch_id: t.batch_id ?? null, batch_ids: t.batch_ids ?? [],
+          batch_allocations: allocations.map((a, j) => ({ batch_id: a.batch_id,
+            amount: j === allocations.length - 1
+              ? Math.round((p.amount - allocationParts.reduce((sum, row) => sum + row[i].amount, 0)) * 100) / 100
+              : allocationParts[j][i].amount })),
+          stock_quantity: i === 0 && t.stock_id ? t.quantity ?? null : null,
+          source: i === 0 && t.stock_id ? 'stock' : null, source_id: i === 0 ? t.stock_id ?? null : null,
+          notes: t.notes ?? '', created_by_name: user.name,
+        }
+      })
       const { data, error } = await supabase.from('transactions').insert(rows).select('id')
       if (error) throw error
       const ids = (data ?? []).map((r) => r.id)

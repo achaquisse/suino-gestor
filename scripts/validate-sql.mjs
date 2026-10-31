@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import { migratedDb } from './migrated-db.mjs';
 
 const db = await migratedDb({ log: true });
@@ -8,6 +9,18 @@ grant usage on schema auth to authenticated; grant execute on all functions in s
 set request.jwt.claim.sub = '${uid}'; set request.jwt.claim.email = 'owner@example.com'; set role authenticated;`);
 const farm = (await db.query(`select public.create_farm('Granja Boane', true) as id`)).rows[0].id;
 const q = async (sql, p = []) => (await db.query(sql, p)).rows;
+assert.equal(Number((await q(`select count(*) from treatment_products where farm_id = $1`, [farm]))[0].count), 7);
+assert.equal(Number((await q(`select count(*) from breeds where farm_id = $1`, [farm]))[0].count), 7);
+assert.equal(Number((await q(`select count(*) from symptoms where farm_id = $1`, [farm]))[0].count), 7);
+assert.equal((await q(`select stock_code from treatment_products where farm_id = $1 and code = 'ferro'`, [farm]))[0].stock_code, 'iron');
+await assert.rejects(q(`insert into stock_items (farm_id, code, name, category) values ($1, 'invalid', 'Inválido', 'Não existe')`, [farm]));
+await q(`insert into categories (farm_id, name, grp) values ($1, 'Nova categoria', 'Operacional')`, [farm]);
+await q(`insert into stock_items (farm_id, code, name, category, unit, unit_price) values ($1, 'custom', 'Artigo próprio', 'Nova categoria', 'un', 15)`, [farm]);
+await q(`update categories set name = 'Categoria actualizada' where farm_id = $1 and name = 'Nova categoria'`, [farm]);
+assert.equal((await q(`select category from stock_items where farm_id = $1 and code = 'custom'`, [farm]))[0].category, 'Categoria actualizada');
+await q(`insert into treatment_products (farm_id, code, name, stock_code) values ($1, 'custom', 'Tratamento próprio', 'custom')`, [farm]);
+await q(`insert into breeds (farm_id, name) values ($1, 'Raça própria')`, [farm]);
+await q(`insert into symptoms (farm_id, name) values ($1, 'Sintoma próprio')`, [farm]);
 console.log(await q(`select (select count(*) from animals) animals, (select count(*) from events) events, (select count(*) from transactions) txs, (select count(*) from tasks) tasks, (select count(*) from stock_items) stock`));
 console.log(await q(`select name, balance from account_balances order by name`));
 console.log(await q(`select code, cost, revenue from batch_results limit 6`));
@@ -15,6 +28,24 @@ const pen = (await q(`select id from pens where name='Maternidade A'`))[0].id;
 const id = async (tag) => (await q(`select id from animals where tag=$1`, [tag]))[0].id;
 const pid = async (n) => (await q(`select id from pens where name=$1`, [n]))[0].id;
 const acct = (await q(`select id from accounts where name='Vendas'`))[0].id;
+await q(`update categories set item_type = 'Produto', quantity_unit = 'kg', baseline_price = 25 where farm_id = $1 and name = 'Ração'`, [farm]);
+const [feed] = await q(`select item_type, quantity_unit, baseline_price from categories where farm_id = $1 and name = 'Ração'`, [farm]);
+assert.equal(feed.item_type, 'Produto');
+assert.equal(feed.quantity_unit, 'kg');
+assert.equal(Number(feed.baseline_price), 25);
+await assert.rejects(q(`update categories set baseline_price = null where farm_id = $1 and name = 'Ração'`, [farm]));
+const [productTx] = await q(`insert into transactions (farm_id, tx_date, title, account_id, kind, category, amount, quantity, quantity_unit, unit_price)
+  values ($1, current_date, 'Ração', $2, 'Pontual', 'Ração', -250, 10, 'kg', 25)
+  returning quantity, quantity_unit, unit_price, amount`, [farm, acct]);
+assert.equal(Number(productTx.quantity), 10);
+assert.equal(Number(productTx.amount), -250);
+const [revenueTx] = await q(`insert into transactions (farm_id, tx_date, title, account_id, kind, category, amount, quantity, quantity_unit, unit_price)
+  values ($1, current_date, 'Venda de ovos', $2, 'Receita', 'Outras receitas', 300, 12, 'un', 25)
+  returning quantity, amount`, [farm, acct]);
+assert.equal(Number(revenueTx.quantity), 12);
+assert.equal(Number(revenueTx.amount), 300);
+await assert.rejects(q(`insert into transactions (farm_id, tx_date, title, account_id, kind, category, amount, quantity, unit_price)
+  values ($1, current_date, 'Ração', $2, 'Pontual', 'Ração', -250, 10, 25)`, [farm, acct]));
 const stockId = (await q(`select id from stock_items where code='iver'`))[0].id;
 const recur = (await q(`select id from recurring_expenses limit 1`))[0].id;
 const debt = (await q(`select id from debts where paid < total limit 1`))[0].id;
@@ -35,6 +66,39 @@ const tests = [
   [`select public.accept_invites()`, []],
 ];
 for (const [sql, p] of tests) { try { await q(sql, p); console.log('ok rpc'); } catch (e) { console.error('RPC FAIL', sql.slice(0, 60), e.message); } }
+const [saleTx] = await q(`select quantity, quantity_unit, unit_price from transactions where farm_id = $1 and source = 'sale' order by created_at desc limit 1`, [farm]);
+assert.equal(Number(saleTx.quantity), 95);
+assert.equal(saleTx.quantity_unit, 'kg');
+assert.equal(Number(saleTx.unit_price), 70);
+const [stockTx] = await q(`select quantity, quantity_unit, unit_price from transactions where farm_id = $1 and source = 'stock' order by created_at desc limit 1`, [farm]);
+assert.equal(Number(stockTx.quantity), 4);
+assert.ok(stockTx.quantity_unit);
+assert.equal(Number(stockTx.unit_price), 450);
+const [itemBefore] = await q(`select qty, category, unit from stock_items where id = $1`, [stockId]);
+const batchRows = await q(`select id, cost, revenue from batch_results where farm_id = $1 order by code limit 2`, [farm]);
+const ids = batchRows.map((b) => b.id);
+const [manual] = await q(`insert into transactions (farm_id, tx_date, title, account_id, kind, category, amount, quantity, quantity_unit, unit_price, batch_ids, stock_quantity, source, source_id)
+  values ($1, current_date, 'Compra unificada', $2, 'Pontual', $3, -120, 2, $4, 60, $5, 2, 'stock', $6) returning id`,
+  [farm, acct, itemBefore.category, itemBefore.unit, ids, stockId]);
+assert.equal(Number((await q(`select qty from stock_items where id = $1`, [stockId]))[0].qty), Number(itemBefore.qty) + 2);
+const unallocated = await q(`select cost, revenue from batch_results where id = any($1::uuid[]) order by code`, [ids]);
+assert.deepEqual(unallocated.map((b) => Number(b.cost)), batchRows.map((b) => Number(b.cost)));
+await q(`delete from transactions where id = $1`, [manual.id]);
+assert.equal(Number((await q(`select qty from stock_items where id = $1`, [stockId]))[0].qty), Number(itemBefore.qty));
+await q(`insert into transactions (farm_id, tx_date, title, account_id, kind, category, amount, batch_ids, batch_allocations)
+  values ($1, current_date, 'Despesa distribuída', $2, 'Pontual', 'Veterinário', -100, $3, $4::jsonb)`,
+  [farm, acct, ids, JSON.stringify(ids.map((batch_id) => ({ batch_id, amount: -50 })))]);
+await q(`insert into transactions (farm_id, tx_date, title, account_id, kind, category, amount, batch_ids, batch_allocations)
+  values ($1, current_date, 'Receita distribuída', $2, 'Receita', 'Outras receitas', 40, $3, $4::jsonb)`,
+  [farm, acct, ids, JSON.stringify(ids.map((batch_id) => ({ batch_id, amount: 20 })))]);
+const allocatedRows = await q(`select cost, revenue from batch_results where id = any($1::uuid[]) order by code`, [ids]);
+allocatedRows.forEach((b, i) => {
+  assert.equal(Number(b.cost), Number(batchRows[i].cost) + 50);
+  assert.equal(Number(b.revenue), Number(batchRows[i].revenue) + 20);
+});
+await assert.rejects(q(`insert into transactions (farm_id, tx_date, title, account_id, kind, category, amount, batch_ids, batch_allocations)
+  values ($1, current_date, 'Distribuição inválida', $2, 'Pontual', 'Veterinário', -100, $3, $4::jsonb)`,
+  [farm, acct, ids, JSON.stringify([{ batch_id: ids[0], amount: -30 }])]));
 console.log(await q(`select status, count(*) from animals where tag like 'L14-%' group by 1`));
 console.log(await q(`select tag, stage, status from animals where tag like 'L09-%' or tag like 'C-%' limit 4`));
 console.log(await q(`select name, balance from account_balances order by name`));
@@ -42,6 +106,10 @@ console.log(await q(`select title, done_at is not null done from tasks order by 
 await db.exec(`reset role; insert into auth.users values ('22222222-2222-2222-2222-222222222222','joao.mabunda@example.com','{}'); set request.jwt.claim.sub='22222222-2222-2222-2222-222222222222'; set request.jwt.claim.email='joao.mabunda@example.com'; set role authenticated;`);
 console.log('accept', await q(`select public.accept_invites()`));
 console.log('caretaker sees txs:', (await q(`select count(*) from transactions`))[0], 'animals:', (await q(`select count(*) from animals`))[0]);
+assert.equal(Number((await q(`select count(*) from treatment_products where farm_id = $1`, [farm]))[0].count), 8);
+assert.equal(Number((await q(`select count(*) from breeds where farm_id = $1`, [farm]))[0].count), 8);
+assert.equal(Number((await q(`select count(*) from symptoms where farm_id = $1`, [farm]))[0].count), 8);
+await assert.rejects(q(`insert into symptoms (farm_id, name) values ($1, 'Sem permissão') returning id`, [farm]));
 try { await q(`select public.log_sale($1, $2, 95, 70, 'x', $3)`, [farm, await id('F-062'), acct]); console.log('BAD: caretaker sale allowed'); } catch (e) { console.log('caretaker sale blocked:', e.message); }
 
 // Hardening checks (20261029000000_hardening.sql)
@@ -61,6 +129,10 @@ await q(`delete from farms where id = $1`, [farm]);
 console.log('farm delete cascades past owner guard:', (await q(`select count(*) from farm_members where farm_id = $1`, [farm]))[0]);
 
 await db.exec(`reset role; set request.jwt.claim.sub = '${uid}'; set role authenticated;`);
+const freshFarm = (await q(`select public.create_farm('Nova granja', false) as id`))[0].id;
+assert.equal(Number((await q(`select count(*) from treatment_products where farm_id = $1`, [freshFarm]))[0].count), 7);
+assert.equal(Number((await q(`select count(*) from breeds where farm_id = $1`, [freshFarm]))[0].count), 7);
+assert.equal(Number((await q(`select count(*) from symptoms where farm_id = $1`, [freshFarm]))[0].count), 7);
 console.log('help docs:', (await q(`select kind, count(*) from help_docs group by kind order by kind`)));
 for (const [query, cat] of [['', null], ['carência', null], ['CARENCIA', null], ['ferro', null], ['cio', 'Reprodução'], ['peste suina', null], ['xyzzy', null]]) {
   const r = (await q(`select public.search_help($1, $2) as r`, [query, cat]))[0].r;

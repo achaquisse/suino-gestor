@@ -28,14 +28,7 @@ export const ROLE_LABEL: Record<Role, string> = {
   investor: 'Investidor',
 }
 
-export const CATC: Record<string, string> = {
-  'Ração': '#5B4CF0', 'Medicamentos': '#3BA9C7', 'Veterinário': '#E0607A', 'Mão-de-obra': '#E8A23A', 'Materiais': '#9A9AAE',
-  'Transporte': '#A88BF2', 'Animais': '#C1579B', 'Infra-estrutura': '#2FA684', 'Venda de animais': '#15A05A', 'Aporte': '#6FCF9F',
-  'Outras receitas': '#7BC6B0', 'Energia e água': '#4DB6D0', 'Pagamento de dívida': '#7A7A90',
-}
 export const SWATCH = ['#5B4CF0', '#3BA9C7', '#2FA684', '#15A05A', '#E8A23A', '#E0607A', '#C1579B', '#A88BF2', '#9A9AAE']
-export const DIRECT = ['Ração', 'Medicamentos', 'Veterinário', 'Animais']
-export const OPEX = ['Mão-de-obra', 'Materiais', 'Transporte']
 export const FREQS = ['Semanal', 'Mensal', 'Trimestral', 'Anual'] as const
 export const FMUL: Record<string, number> = { Semanal: 4.33, Mensal: 1, Trimestral: 1 / 3, Anual: 1 / 12 }
 export const PGROUPS = ['Reprodução', 'Crescimento', 'Vendas', 'Stock', 'Saúde', 'Finanças'] as const
@@ -51,20 +44,6 @@ export const SGC: Record<StageGroup, string> = {
   rep: 'oklch(0.66 0.16 10)', lei: 'oklch(0.74 0.14 70)', cre: 'oklch(0.68 0.13 210)', rec: 'oklch(0.62 0.15 160)', eng: 'oklch(0.6 0.19 280)', var: '#6B6B80',
 }
 
-export type HelpRef = readonly ['pb' | 'art', string]
-export type Product = {
-  id: string; name: string; ml: number | null; perKg: number | null; dose?: string; via: string; car: number; stock?: string; help: HelpRef
-}
-export const PRODUCTS: Product[] = [
-  { id: 'ferro', name: 'Ferro dextrano 200 mg', ml: 2, perKg: null, via: 'Intramuscular · pescoço', car: 0, stock: 'iron', help: ['art', 'vacinas'] },
-  { id: 'oxi', name: 'Oxitetraciclina LA 20%', ml: 1, perKg: 10, via: 'Intramuscular', car: 28, help: ['art', 'carencia'] },
-  { id: 'iver', name: 'Ivermectina 1%', ml: 1, perKg: 33, via: 'Subcutânea', car: 28, stock: 'iver', help: ['art', 'carencia'] },
-  { id: 'parvo', name: 'Vacina Parvovirose + Erisipela', ml: 2, perKg: null, via: 'Intramuscular', car: 0, stock: 'parvo', help: ['art', 'vacinas'] },
-  { id: 'myco', name: 'Vacina Mycoplasma', ml: 2, perKg: null, via: 'Intramuscular', car: 0, help: ['art', 'vacinas'] },
-  { id: 'b12', name: 'Vitamina B12', ml: 1, perKg: null, via: 'Intramuscular', car: 0, help: ['art', 'vacinas'] },
-  { id: 'elec', name: 'Electrólitos orais', ml: null, perKg: null, dose: '1 saqueta / 2 L de água', via: 'Oral · na água', car: 0, help: ['pb', 'diar'] },
-]
-
 export type LogType =
   | 'birth' | 'illness' | 'transfer' | 'mating' | 'treatment' | 'weight' | 'death' | 'sale' | 'expense' | 'purchase' | 'buyAnimals' | 'activity'
 export const LOG_TYPES: { id: LogType; label: string; icon: string }[] = [
@@ -77,7 +56,6 @@ export const LOG_TYPES: { id: LogType; label: string; icon: string }[] = [
   { id: 'death', label: 'Morte', icon: 'heart_broken' },
   { id: 'sale', label: 'Venda', icon: 'sell' },
   { id: 'expense', label: 'Despesa', icon: 'receipt_long' },
-  { id: 'purchase', label: 'Compra', icon: 'shopping_cart' },
   { id: 'buyAnimals', label: 'Compra de animais', icon: 'add_shopping_cart' },
   { id: 'activity', label: 'Actividade', icon: 'event' },
 ]

@@ -1,5 +1,4 @@
 import { Icon, Pager, Segmented, SearchInput, Select, Card, cx, type usePaged } from '@/ui'
-import { CATC, MUTED } from '@/lib/constants'
 import type { Transaction } from '@/lib/database.types'
 import { dShort, sgn } from '@/lib/format'
 import { pctIn, type Filters, type Lookups } from './model'
@@ -35,7 +34,7 @@ export default function TransactionsCard({ rows, pager, total, categories, filte
             return (
               <button key={c ?? 'all'} type="button" onClick={() => onFilters({ cat: c })}
                 className={cx('flex h-8 items-center gap-1.5 rounded-full border px-3 text-[13px] font-semibold', on ? 'border-[#C9C2FB] bg-accent-soft text-accent-strong' : 'border-line-strong bg-white text-ink-2')}>
-                {c && <span className="h-2 w-2 rounded-full" style={{ background: lookups.categoryColor(c) || CATC[c] || MUTED }} />}
+                {c && <span className="h-2 w-2 rounded-full" style={{ background: lookups.categoryColor(c) }} />}
                 {c ?? 'Todas'}
               </button>
             )

@@ -13,7 +13,8 @@ import { PayDebtSheet, PayRecurringSheet } from './PaySheet'
 import RecurringSheet from './RecurringSheet'
 import TransactionsCard from './TransactionsCard'
 import TxDetailSheet from './TxDetailSheet'
-import { defaultFilters, groupSiblings, isFiltered, makeLookups, splitsOf, type Filters } from './model'
+import { setUrlParams, useUrlParams, useUrlState } from '@/lib/urlState'
+import { defaultFilters, filtersFromParams, filtersToParams, groupSiblings, isFiltered, makeLookups, splitsOf, type Filters } from './model'
 import { useFilesIndex } from './useFilesIndex'
 
 type Modal =
@@ -40,11 +41,13 @@ function MoneyContent({ canWrite }: { canWrite: boolean }) {
   const debtQ = useDebts()
   const withFiles = useFilesIndex()
 
-  const [filters, setFilters] = useState<Filters>(defaultFilters)
-  const [chart, setChart] = useState<'rv' | 'res'>('rv')
-  const [selKey, setSelKey] = useState<string | null>(null)
-  const [group, setGroup] = useState<CatGroup>('all')
-  const [tab, setTab] = useState<CommitTab>('rec')
+  const params = useUrlParams()
+  const filters = useMemo(() => filtersFromParams(params), [params])
+  const [chart, setChart] = useUrlState<'rv' | 'res'>('chart', 'rv', ['rv', 'res'])
+  const selKey = params.get('bar')
+  const setSelKey = (k: string | null) => setUrlParams({ bar: k })
+  const [group, setGroup] = useUrlState<CatGroup>('group', 'all', ['all', 'Investimento', 'Operacional'])
+  const [tab, setTab] = useUrlState<CommitTab>('commit', 'rec', ['rec', 'debt'])
   const [modal, setModal] = useState<Modal | null>(null)
 
   const txs = useMemo(() => txQ.data ?? [], [txQ.data])
@@ -69,7 +72,7 @@ function MoneyContent({ canWrite }: { canWrite: boolean }) {
     return s
   }, [per, filters, lookups])
 
-  const { rows, pager, reset } = usePaged(list, 10)
+  const { rows, pager } = usePaged(list, 10)
   const cats = useMemo(() => [...new Set(per.map((t) => t.category))], [per])
 
   const recs = useMemo(() => (recQ.data ?? []).filter((r) => r.active && (filters.acct === 'all' || splitsOf(r).some((s) => s.account_id === filters.acct))), [recQ.data, filters.acct])
@@ -79,8 +82,8 @@ function MoneyContent({ canWrite }: { canWrite: boolean }) {
   const err = txQ.error ?? accQ.error ?? balQ.error ?? catQ.error ?? recQ.error ?? debtQ.error
   if (err) return <ErrorState error={err} />
 
-  const patch = (p: Partial<Filters>) => { setFilters((f) => ({ ...f, ...p })); reset() }
-  const clear = () => { setFilters(defaultFilters()); setSelKey(null); reset() }
+  const patch = (p: Partial<Filters>) => setUrlParams({ ...filtersToParams(p), page: null })
+  const clear = () => setUrlParams({ ...filtersToParams(defaultFilters()), bar: null, page: null })
   const close = () => setModal(null)
   const balance = (filters.acct === 'all' ? balances : balances.filter((b) => b.id === filters.acct)).reduce((a, b) => a + b.balance, 0)
   const totalExpenses = -per.filter((t) => t.amount < 0).reduce((a, t) => a + t.amount, 0)

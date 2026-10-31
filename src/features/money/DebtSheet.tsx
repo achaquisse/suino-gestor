@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { addMonths, numP, todayISO } from '@/lib/format'
+import { addMonths, numP, todayISO, validDate } from '@/lib/format'
 import { useAccounts, useTableMutations } from '@/lib/queries'
 import { errorMessage } from '@/lib/supabase'
 import type { Debt } from '@/lib/database.types'
@@ -27,12 +27,15 @@ export default function DebtSheet({ item, onClose }: { item: Debt | null; onClos
 
   const save = async () => {
     const t = numP(total)
-    const p = numP(paid) || 0
+    const p = paid.trim() ? numP(paid) : 0
     const i = numP(installment)
     if (!creditor.trim()) return setError('Indique o credor.')
     if (!(t > 0)) return setError('Indique o valor total.')
+    if (!(p >= 0)) return setError('Indique um valor já pago válido.')
     if (p > t) return setError('O valor pago não pode ser maior que o total.')
     if (!(i > 0)) return setError('Indique o valor da prestação.')
+    if (p < t && !validDate(nextDue)) return setError('Indique um próximo vencimento válido.')
+    if (sp.some((s) => !accounts.some((a) => a.id === s.account_id))) return setError('Escolha uma conta de pagamento activa.')
     const se = splitCheck(sp)
     if (se) return setError(se)
     const parts = toSplits(sp)

@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
-import { PRODUCTS } from '@/lib/constants'
-import { useRpc, useStock } from '@/lib/queries'
+import { useRpc, useStock, useSymptoms, useTreatmentProducts } from '@/lib/queries'
 import { dShort, addDays, dec, numP, plural } from '@/lib/format'
 import { Button, Field, Icon, Input, Segmented, Select, Textarea, Toggle, cx } from '@/ui'
 import {
@@ -10,7 +9,10 @@ import {
 
 export function TreatmentForm({ ctx, onBack, onClose }: FormProps) {
   const { pens, animals, penName, count } = useBase()
-  const stock = useStock().data ?? []
+  const stockQ = useStock()
+  const stock = stockQ.data ?? []
+  const productsQ = useTreatmentProducts()
+  const products = (productsQ.data ?? []).filter((p) => p.active)
   const navigate = useNavigate()
   const c = useCommon(ctx)
   const rpc = useRpc('log_treatment')
@@ -20,31 +22,34 @@ export function TreatmentForm({ ctx, onBack, onClose }: FormProps) {
   const [pen, setPen] = useState(initialPen)
   const [sel, setSel] = useState<string[]>(() =>
     ctxAnimal ? [ctxAnimal.id] : animals.filter((a) => a.pen_id === initialPen).map((a) => a.id))
-  const [productId, setProductId] = useState(ctx.product && PRODUCTS.some((p) => p.id === ctx.product) ? ctx.product : 'ferro')
-  const P = PRODUCTS.find((p) => p.id === productId) ?? PRODUCTS[0]
+  const [productId, setProductId] = useState(ctx.product ?? '')
+  const P = products.find((p) => p.code === productId) ?? products[0]
   const penAnimals = animals.filter((a) => a.pen_id === pen)
   const chosen = sel.filter((id) => penAnimals.some((a) => a.id === id))
   const allOn = penAnimals.length > 0 && chosen.length === penAnimals.length
-  const stockItem = P.stock ? stock.find((s) => s.code === P.stock) : undefined
-  const dose = P.dose ?? (P.ml ? (P.perKg ? `${P.ml} ml / ${P.perKg} kg` : `${P.ml} ml por animal`) : '—')
+  const stockItem = P?.stock_code ? stock.find((s) => s.code === P.stock_code && s.active) : undefined
+  const dose = P?.dose_text || (P?.dose_ml ? (P.per_kg ? `${P.dose_ml} ml / ${P.per_kg} kg` : `${P.dose_ml} ml por animal`) : '—')
   const toggle = (id: string) => setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
   const info: [string, string, boolean?][] = [
-    ['Dose', dose], ['Via', P.via],
-    ['Carência', P.car ? `${P.car} dias · até ${dShort(addDays(c.date, P.car))}` : 'Nenhuma', P.car > 0],
+    ['Dose', dose], ['Via', P?.route ?? '—'],
+    ['Carência', P?.withdrawal_days ? `${P.withdrawal_days} dias · até ${dShort(addDays(c.date, P.withdrawal_days))}` : 'Nenhuma', (P?.withdrawal_days ?? 0) > 0],
   ]
 
   const submit = () => run(async () => {
     if (!chosen.length) throw new Error('Seleccione pelo menos um animal.')
+    if (!P) throw new Error('Não há produtos de tratamento activos. Configure-os nas definições.')
+    if (P.stock_code && !stockItem) throw new Error('Não foi possível carregar o artigo de stock associado.')
     await rpc.mutateAsync({
-      p_animal_ids: chosen, p_product: P.id, p_product_name: P.name, p_withdrawal_days: P.car,
+      p_animal_ids: chosen, p_product: P.code, p_product_name: P.name, p_withdrawal_days: P.withdrawal_days,
       p_stock_code: stockItem?.code, p_date: c.date, p_by: c.by,
     })
-    return `Tratamento registado · ${P.name} · ${plural(chosen.length, 'animal', 'animais')}${P.car ? ` · carência ${P.car} dias` : ''}`
+    return `Tratamento registado · ${P.name} · ${plural(chosen.length, 'animal', 'animais')}${P.withdrawal_days ? ` · carência ${P.withdrawal_days} dias` : ''}`
   })
 
   const help = () => {
+    if (!P) return
     onClose()
-    navigate(`/help/${P.help[0] === 'pb' ? 'playbooks' : 'articles'}/${P.help[1]}`)
+    navigate(`/help/${P.help_kind === 'pb' ? 'playbooks' : 'articles'}/${P.help_slug}`)
   }
 
   return (
@@ -70,10 +75,12 @@ export function TreatmentForm({ ctx, onBack, onClose }: FormProps) {
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-2">
           <span className="text-[13px] font-semibold text-ink-2">Produto</span>
-          <Button variant="ghost" size="sm" icon="help" className="!h-7 px-2 font-medium text-accent-strong" onClick={help}>Como aplicar</Button>
+          {P && <Button variant="ghost" size="sm" icon="help" className="!h-7 px-2 font-medium text-accent-strong" onClick={help}>Como aplicar</Button>}
         </div>
-        <Select value={productId} onChange={(e) => setProductId(e.target.value)}>
-          {PRODUCTS.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+        {productsQ.error && <span className="text-sm text-danger">Não foi possível carregar os produtos.</span>}
+        {!productsQ.isLoading && !products.length && !productsQ.error && <span className="text-sm text-muted">Configure produtos de tratamento nas definições.</span>}
+        <Select value={P?.code ?? ''} disabled={!products.length} onChange={(e) => setProductId(e.target.value)}>
+          {products.map((p) => <option key={p.id} value={p.code}>{p.name}</option>)}
         </Select>
         <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,130px),1fr))] gap-px overflow-hidden rounded-[14px] bg-line">
           {info.map(([l, v, warn]) => (
@@ -105,14 +112,12 @@ function Chipper({ on, icon, onClick, children, title, tab }: { on: boolean; ico
   )
 }
 
-const SYMPTOMS: [string, string][] = [
-  ['Tosse', 'air'], ['Febre', 'thermostat'], ['Diarreia', 'water_drop'], ['Falta de apetite', 'no_meals'],
-  ['Coxeira', 'accessible'], ['Ferida', 'healing'], ['Prostração', 'bedtime'],
-]
 const SEVERITIES = [['Ligeira', 'Ligeira'], ['Moderada', 'Moderada'], ['Grave', 'Grave']] as const
 
 export function IllnessForm({ ctx, onBack, onClose }: FormProps) {
   const { animals, penName } = useBase()
+  const symptomsQ = useSymptoms()
+  const symptoms = (symptomsQ.data ?? []).filter((s) => s.active)
   const list = scoped(animals, ctx)
   const c = useCommon(ctx)
   const rpc = useRpc('log_illness')
@@ -126,7 +131,7 @@ export function IllnessForm({ ctx, onBack, onClose }: FormProps) {
 
   const submit = () => run(async () => {
     if (!a) throw new Error('Seleccione um animal.')
-    if (!sym.length) throw new Error('Seleccione pelo menos um sintoma.')
+    if (!sym.length || sym.some((name) => !symptoms.some((s) => s.name === name))) throw new Error('Seleccione pelo menos um sintoma activo.')
     await rpc.mutateAsync({ p_animal: a.id, p_symptoms: sym, p_severity: sev, p_isolate: iso, p_notes: notes.trim(), p_date: c.date, p_by: c.by })
     return `Doença registada · ${a.tag} · ${sym.join(', ').toLowerCase()} · ${sev.toLowerCase()}${iso ? ' · isolado' : ''}`
   })
@@ -138,13 +143,15 @@ export function IllnessForm({ ctx, onBack, onClose }: FormProps) {
       <div className="flex flex-col gap-2">
         <span className="text-[13px] font-semibold text-ink-2">Sintomas</span>
         <div className="flex flex-wrap gap-2">
-          {SYMPTOMS.map(([l, i]) => {
-            const on = sym.includes(l)
+          {symptomsQ.error && <span className="text-sm text-danger">Não foi possível carregar os sintomas.</span>}
+          {!symptomsQ.isLoading && !symptoms.length && !symptomsQ.error && <span className="text-sm text-muted">Configure sintomas nas definições.</span>}
+          {symptoms.map((s) => {
+            const on = sym.includes(s.name)
             return (
-              <button key={l} type="button" aria-pressed={on} onClick={() => setSym(on ? sym.filter((x) => x !== l) : [...sym, l])}
+              <button key={s.id} type="button" aria-pressed={on} onClick={() => setSym(on ? sym.filter((x) => x !== s.name) : [...sym, s.name])}
                 className={cx('flex h-9 items-center gap-1.5 rounded-full border px-3 text-[13px] font-medium',
                   on ? 'border-[#F7C6C0] bg-danger-soft text-danger' : 'border-line-strong bg-white text-ink-2')}>
-                <Icon name={on ? 'check' : i} size={16} />{l}
+                <Icon name={on ? 'check' : s.icon} size={16} />{s.name}
               </button>
             )
           })}

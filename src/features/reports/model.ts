@@ -1,5 +1,5 @@
-import { DIRECT, OPEX, SWATCH } from '@/lib/constants'
-import type { Account, AccountBalance, Batch, Transaction } from '@/lib/database.types'
+import { SWATCH } from '@/lib/constants'
+import type { Account, AccountBalance, Category, Transaction } from '@/lib/database.types'
 import { addDays, dISO, dShort, dUTC, isoOf, MONTHS, MONTHS3, pad, todayISO } from '@/lib/format'
 
 export type Period = 'mes' | '3m' | 'ano' | 'custom'
@@ -53,25 +53,28 @@ const sum = (rows: Transaction[]) => rows.reduce((s, t) => s + t.amount, 0)
 
 export type Statement = {
   revenue: number; direct: number; gross: number; opex: number; net: number; infra: number; salesCount: number
-  revenueByBatch: [string, number][]; directByCat: [string, number][]; opexByCat: [string, number][]
+  revenueByCat: [string, number][]; directByCat: [string, number][]; opexByCat: [string, number][]
 }
 
-export function statement(per: Transaction[], batches: Batch[]): Statement {
-  const outBy = (cs: string[]) => -sum(per.filter((t) => t.amount < 0 && cs.includes(t.category)))
-  const byCat = (cs: string[]): [string, number][] =>
-    cs.map((c) => [c, -sum(per.filter((t) => t.amount < 0 && t.category === c))] as [string, number]).filter((x) => x[1] > 0)
+export function statement(per: Transaction[], categories: Category[]): Statement {
+  const groups = new Map(categories.map((c) => [c.name, c.grp]))
+  const isDirect = (name: string) => name !== 'Infra-estrutura' && groups.get(name) === 'Investimento'
+  const isOpex = (name: string) => groups.get(name) === 'Operacional'
   const inc = per.filter((t) => t.amount > 0 && t.category !== 'Aporte')
-  const revenue = sum(inc)
-  const direct = outBy(DIRECT)
-  const opex = outBy(OPEX)
-  const il = new Map<string, number>()
-  for (const t of inc) {
-    const k = batches.find((b) => b.id === t.batch_id)?.code ?? 'Outras vendas'
-    il.set(k, (il.get(k) ?? 0) + t.amount)
+  const byCat = (rows: Transaction[]) => {
+    const values = new Map<string, number>()
+    for (const t of rows) values.set(t.category, (values.get(t.category) ?? 0) + Math.abs(t.amount))
+    return [...values] as [string, number][]
   }
+  const directByCat = byCat(per.filter((t) => t.amount < 0 && isDirect(t.category)))
+  const opexByCat = byCat(per.filter((t) => t.amount < 0 && isOpex(t.category)))
+  const revenue = sum(inc)
+  const direct = directByCat.reduce((n, [, v]) => n + v, 0)
+  const opex = opexByCat.reduce((n, [, v]) => n + v, 0)
   return {
-    revenue, direct, gross: revenue - direct, opex, net: revenue - direct - opex, infra: outBy(['Infra-estrutura']), salesCount: inc.length,
-    revenueByBatch: [...il], directByCat: byCat(DIRECT), opexByCat: byCat(OPEX),
+    revenue, direct, gross: revenue - direct, opex, net: revenue - direct - opex,
+    infra: -sum(per.filter((t) => t.amount < 0 && t.category === 'Infra-estrutura')), salesCount: inc.length,
+    revenueByCat: byCat(inc), directByCat, opexByCat,
   }
 }
 

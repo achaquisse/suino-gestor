@@ -5,7 +5,7 @@ import { Button, Card, Progress } from '@/ui'
 export default function StockCard() {
   const { openLog } = useOverlays()
   const { data } = useStock()
-  const items = data ?? []
+  const items = (data ?? []).filter((s) => s.active)
   const low = items.filter((s) => s.qty <= s.low_qty).length
   if (!items.length) return null
   return (

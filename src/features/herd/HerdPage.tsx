@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router'
 import { useFarm } from '@/app/farm'
+import { setUrlParams, useUrlState, type UrlPatch } from '@/lib/urlState'
 import { useOverlays } from '@/app/overlays'
 import { Button, Card, ErrorState, Icon, IconTile, Loading, Progress, SearchInput, Segmented, cx } from '@/ui'
 import { ACC, GREEN, INK, RED, SGC, SGL, type StageGroup } from '@/lib/constants'
@@ -12,17 +13,21 @@ type StageFilter = StageGroup | 'all'
 type StFilter = 'all' | 'attn' | CatId
 
 const STAGE_KEYS: StageFilter[] = ['all', 'rep', 'lei', 'cre', 'rec', 'eng', 'var']
+const ST_KEYS: StFilter[] = ['all', 'attn', ...ACAT.map((c) => c.id)]
 
 export default function HerdPage() {
   const nav = useNavigate()
-  const { isOwner, canEditHerd } = useFarm()
-  const { openLog, openBuyAnimals } = useOverlays()
+  const { canEditHerd } = useFarm()
+  const { openLog } = useOverlays()
   const { list, pens, loading, error, refetch } = useHerd()
-  const [view, setView] = useState<'pens' | 'list'>('pens')
-  const [stage, setStage] = useState<StageFilter>('all')
-  const [st, setSt] = useState<StFilter>('all')
-  const [query, setQuery] = useState('')
-  const [ac, setAc] = useState<CatId | null>(null)
+  const [view] = useUrlState<'pens' | 'list'>('view', 'pens', ['pens', 'list'])
+  const [stage] = useUrlState<StageFilter>('stage', 'all', STAGE_KEYS)
+  const [st] = useUrlState<StFilter>('status', 'all', ST_KEYS)
+  const [query] = useUrlState('q', '')
+  const [ac, setAc] = useUrlState<CatId | ''>('attn', '')
+  const set = (p: UrlPatch) => setUrlParams({ ...p, page: null })
+  const setStage = (g: StageFilter) => set({ stage: g === 'all' ? null : g })
+  const setQuery = (v: string) => set({ q: v })
 
   const q = query.trim().toLowerCase()
   const shownView = q ? 'list' : view
@@ -50,7 +55,7 @@ export default function HerdPage() {
   if (error) return <ErrorState error={error} retry={refetch} />
 
   const filtered = stage !== 'all' || st !== 'all' || !!q
-  const toList = (s: StFilter, g: StageFilter = 'all') => { setQuery(''); setSt(s); setStage(g); setView('list') }
+  const toList = (s: StFilter, g: StageFilter = 'all') => set({ q: null, status: s === 'all' ? null : s, stage: g === 'all' ? null : g, view: 'list' })
   const listTitle = q ? `Resultados para “${query.trim()}”` : st === 'attn' ? 'Precisam de atenção' : st !== 'all' ? ACAT.find((c) => c.id === st)?.title ?? '' : stage === 'all' ? 'Todos os animais' : SGL[stage]
   const reps = list.filter((a) => a.g === 'rep').length
   const lei = list.filter((a) => a.g === 'lei').length
@@ -69,17 +74,12 @@ export default function HerdPage() {
         </Card>
       ) : (
         <>
-          {isOwner && (
-            <div className="flex flex-wrap justify-end gap-2">
-              <Button icon="add_shopping_cart" onClick={() => openBuyAnimals()}>Registar compra de animais</Button>
-            </div>
-          )}
           <KpiGrid>
             <Kpi label="Animais" value={list.length} sub={plural(pens.data!.length, 'curral', 'currais')} icon="pets" bg="#EEECFE" fg={ACC} />
-            <Kpi label="Reprodutoras" value={reps} sub="porcas e leitoas" icon="favorite" bg="#FCE7F3" fg="#B0306E" onClick={() => { setStage('rep'); setView('list') }} />
-            <Kpi label="Leitões" value={lei} sub="em maternidade" icon="child_care" bg="#FDF1E2" fg="#A2601A" onClick={() => { setStage('lei'); setView('list') }} />
+            <Kpi label="Reprodutoras" value={reps} sub="porcas e leitoas" icon="favorite" bg="#FCE7F3" fg="#B0306E" onClick={() => set({ stage: 'rep', view: 'list' })} />
+            <Kpi label="Leitões" value={lei} sub="em maternidade" icon="child_care" bg="#FDF1E2" fg="#A2601A" onClick={() => set({ stage: 'lei', view: 'list' })} />
             <Kpi label="Precisam de atenção" value={attnN} sub="saúde, tratamento ou carência" icon="error" bg="#FDECEA" fg="#C0302A"
-              valueColor={attnN ? RED : GREEN} active={st !== 'all'} onClick={() => { setQuery(''); setSt(st === 'attn' ? 'all' : 'attn'); setView('list') }} />
+              valueColor={attnN ? RED : GREEN} active={st !== 'all'} onClick={() => set({ q: null, status: st === 'attn' ? null : 'attn', view: 'list' })} />
           </KpiGrid>
 
           {selCat && (
@@ -137,10 +137,10 @@ export default function HerdPage() {
           <div className="flex flex-wrap items-center gap-2.5">
             <SearchInput className="max-w-[380px] min-w-[220px] flex-1" value={query} onChange={setQuery} placeholder="Procurar brinco, fase ou curral" />
             {filtered && (
-              <button type="button" onClick={() => { setQuery(''); setStage('all'); setSt('all') }} className="h-11 rounded-xl border-0 bg-transparent px-2.5 text-sm font-semibold text-accent-strong hover:bg-accent-tint">Limpar filtros</button>
+              <button type="button" onClick={() => set({ q: null, stage: null, status: null })} className="h-11 rounded-xl border-0 bg-transparent px-2.5 text-sm font-semibold text-accent-strong hover:bg-accent-tint">Limpar filtros</button>
             )}
             <div className="ml-auto">
-              <Segmented value={shownView} onChange={(v) => { if (q && v === 'pens') setQuery(''); setView(v) }} options={[['pens', 'Currais'], ['list', 'Lista']] as const} />
+              <Segmented value={shownView} onChange={(v) => setUrlParams(q && v === 'pens' ? { q: null, view: null, page: null } : { view: v === 'pens' ? null : v })} options={[['pens', 'Currais'], ['list', 'Lista']] as const} />
             </div>
           </div>
 

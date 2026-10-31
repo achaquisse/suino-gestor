@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { useQueries } from '@tanstack/react-query'
 import { useFarm } from '@/app/farm'
 import { fmt, dLong, initials, sgn } from '@/lib/format'
-import { farmKey, signedUrl, uploadTransactionFile, useInvalidateFarm, useTableMutations } from '@/lib/queries'
+import { farmKey, signedUrl, uploadTransactionFile, useBatches, useInvalidateFarm, useTableMutations } from '@/lib/queries'
 import { errorMessage, supabase } from '@/lib/supabase'
 import type { Transaction, TransactionFile } from '@/lib/database.types'
 import { Button, ConfirmSheet, Icon, IconTile, Sheet, cx, useToast } from '@/ui'
@@ -26,6 +26,7 @@ function useSiblingFiles(ids: string[]) {
 
 export default function TxDetailSheet({ tx, all, lookups, onClose, onBack }: { tx: Transaction; all: Transaction[]; lookups: Lookups; onClose: () => void; onBack?: () => void }) {
   const { isOwner, farmId } = useFarm()
+  const batches = useBatches().data ?? []
   const toast = useToast()
   const invalidate = useInvalidateFarm()
   const { remove } = useTableMutations('transactions')
@@ -39,12 +40,18 @@ export default function TxDetailSheet({ tx, all, lookups, onClose, onBack }: { t
   const inc = tx.amount > 0
   const split = sibs.length > 1
   const pct = split ? Math.round((Math.abs(tx.amount) / sum) * 100) : null
+  const batchIds = [...new Set(sibs.flatMap((s) => [...(s.batch_id ? [s.batch_id] : []), ...(s.batch_ids ?? [])]))]
+  const allocations = sibs.flatMap((s) => Array.isArray(s.batch_allocations) ? s.batch_allocations : [])
+  const batchName = (id: string) => batches.find((b) => b.id === id)?.code ?? id
 
   const info: { k: string; v: string; dot?: string }[] = [
     { k: 'Data', v: dLong(tx.tx_date) },
     { k: 'Categoria', v: tx.category, dot: lookups.categoryColor(tx.category) },
     { k: 'Conta', v: lookups.accountName(tx.account_id) + (pct ? ` · ${pct}%` : ''), dot: lookups.accountColor(tx.account_id) },
     { k: 'Tipo', v: tx.kind },
+    ...(batchIds.length ? [{ k: 'Lotes', v: batchIds.map(batchName).join(', ') }] : []),
+    ...(tx.quantity != null ? [{ k: 'Quantidade', v: `${fmt(sibs.reduce((n, s) => n + (s.quantity ?? 0), 0))} ${tx.quantity_unit ?? ''}` },
+      { k: 'Preço por unidade', v: `${fmt(tx.unit_price ?? 0)} MT` }] : []),
   ]
 
   const open = async (f: TransactionFile) => {
@@ -115,6 +122,14 @@ export default function TxDetailSheet({ tx, all, lookups, onClose, onBack }: { t
               </div>
             )}
           </div>
+
+          {allocations.length > 0 && <div className="flex flex-col gap-2">
+            <span className="text-[13px] font-semibold text-ink-2">Distribuição por lote</span>
+            {batchIds.map((id) => <div key={id} className="flex justify-between text-sm">
+              <span>{batchName(id)}</span>
+              <span className="tabular font-medium">{fmt(allocations.reduce<number>((n, a) => n + (a && typeof a === 'object' && !Array.isArray(a) && a.batch_id === id ? Number(a.amount) : 0), 0))} MT</span>
+            </div>)}
+          </div>}
 
           {split && (
             <div className="flex flex-col gap-2">

@@ -1,4 +1,4 @@
-import { CATC, MUTED } from '@/lib/constants'
+import { MUTED } from '@/lib/constants'
 import type { Account, Category, Split, Transaction } from '@/lib/database.types'
 import { addMonths, dShort, numP, todayISO } from '@/lib/format'
 
@@ -76,7 +76,7 @@ export function makeLookups(accounts: Account[], categories: Category[]): Lookup
   return {
     accountName: (id) => accIdx.get(id)?.name ?? '—',
     accountColor: (id) => accIdx.get(id)?.color ?? MUTED,
-    categoryColor: (n) => cat.get(n)?.color ?? CATC[n] ?? MUTED,
+    categoryColor: (n) => cat.get(n)?.color ?? MUTED,
     categoryGroup: (n) => cat.get(n)?.grp ?? (n === 'Pagamento de dívida' ? 'Dívida' : 'Investimento'),
   }
 }
@@ -113,6 +113,40 @@ export type Filters = {
 }
 
 export const defaultFilters = (): Filters => ({ period: defaultPeriod(), acct: 'all', type: 'all', cat: null, q: '', sort: 'new' })
+
+const TYPES: readonly Filters['type'][] = ['all', 'in', 'out']
+const SORTS: readonly Filters['sort'][] = ['new', 'old', 'high', 'low']
+const ISO = /^\d{4}-\d{2}-\d{2}$/
+
+export function filtersFromParams(p: URLSearchParams): Filters {
+  const d = defaultFilters()
+  const key = p.get('period')
+  const from = p.get('from') ?? ''
+  const to = p.get('to') ?? ''
+  const preset = PERIODS.find(([k]) => k === key)?.[0]
+  const period: Period = key === 'custom' && ISO.test(from) && ISO.test(to) && from <= to ? { key: 'custom', from, to } : preset ? makePeriod(preset) : d.period
+  const type = p.get('type') as Filters['type']
+  const sort = p.get('sort') as Filters['sort']
+  return {
+    period,
+    acct: p.get('acct') || d.acct,
+    type: TYPES.includes(type) ? type : d.type,
+    cat: p.get('cat') || d.cat,
+    q: p.get('q') ?? d.q,
+    sort: SORTS.includes(sort) ? sort : d.sort,
+  }
+}
+
+export function filtersToParams(f: Partial<Filters>): Record<string, string | null> {
+  const out: Record<string, string | null> = {}
+  if (f.period) Object.assign(out, f.period.key === 'custom' ? { period: 'custom', from: f.period.from, to: f.period.to } : { period: f.period.key === '3m' ? null : f.period.key, from: null, to: null })
+  if ('acct' in f) out.acct = f.acct === 'all' ? null : f.acct ?? null
+  if ('type' in f) out.type = f.type === 'all' ? null : f.type ?? null
+  if ('cat' in f) out.cat = f.cat ?? null
+  if ('q' in f) out.q = f.q || null
+  if ('sort' in f) out.sort = f.sort === 'new' ? null : f.sort ?? null
+  return out
+}
 
 export const isFiltered = (f: Filters) => f.period.key !== '3m' || f.acct !== 'all' || f.type !== 'all' || !!f.cat || !!f.q
 

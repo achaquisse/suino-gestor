@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
 import { useFarm } from '@/app/farm'
+import { setUrlParams, useUrlState } from '@/lib/urlState'
 import { useOverlays } from '@/app/overlays'
 import { EV } from '@/lib/constants'
 import { useCalendarEvents, useTasks } from '@/lib/queries'
@@ -15,9 +15,14 @@ export default function CalendarSection() {
   const { canSeeMoney } = useFarm()
   const { openLog } = useOverlays()
   const today = todayISO()
-  const [sel, setSel] = useState(today)
-  const [ym, setYm] = useState(today.slice(0, 7))
-  const [mode, setMode] = useState<Mode>('month')
+  const [dayRaw] = useUrlState('day', '')
+  const sel = /^\d{4}-\d{2}-\d{2}$/.test(dayRaw) ? dayRaw : today
+  const [monthRaw] = useUrlState('month', '')
+  const ym = /^\d{4}-\d{2}$/.test(monthRaw) ? monthRaw : sel.slice(0, 7)
+  const [mode, setMode] = useUrlState<Mode>('cal', 'month', ['month', 'week'])
+  const go = (d: string, month = d.slice(0, 7)) => setUrlParams({ day: d === today ? null : d, month: month === d.slice(0, 7) ? null : month })
+  const setSel = (d: string) => go(d, ym)
+  const setYm = (m: string) => go(sel, m)
 
   const y = +ym.slice(0, 4)
   const m = +ym.slice(5, 7) - 1
@@ -32,7 +37,7 @@ export default function CalendarSection() {
   const events = useCalendarEvents(from, to).data
   const tasks = useTasks(from, to).data
 
-  const byDay = useMemo(() => {
+  const byDay = (() => {
     const map = new Map<string, Entry[]>()
     const push = (d: string, e: Entry) => map.set(d, [...(map.get(d) ?? []), e])
     for (const e of events ?? []) {
@@ -47,7 +52,7 @@ export default function CalendarSection() {
       if (localDate(d).getDay() === 1) push(d, { color: EV.task.c, title: 'Limpar e desinfectar currais', typeLabel: EV.task.l, sub: 'Todos os currais' })
     }
     return map
-  }, [events, tasks, canSeeMoney, from, to])
+  })()
 
   const entries = (d: string) => byDay.get(d) ?? []
   const cells = Array.from({ length: Math.round((dUTC(gridEnd) - dUTC(gridStart)) / 86_400_000) + 1 }, (_, i) => addDays(gridStart, i))
@@ -55,15 +60,13 @@ export default function CalendarSection() {
 
   const shift = (dir: number) => {
     if (mode === 'week') {
-      const nd = addDays(sel, 7 * dir)
-      setSel(nd)
-      setYm(nd.slice(0, 7))
+      go(addDays(sel, 7 * dir))
     } else {
       const d = new Date(y, m + dir, 1)
       setYm(`${d.getFullYear()}-${pad(d.getMonth() + 1)}`)
     }
   }
-  const goToday = () => { setSel(today); setYm(today.slice(0, 7)) }
+  const goToday = () => go(today)
 
   const weekEnd = addDays(weekStart, 6)
   const title = mode === 'month'
