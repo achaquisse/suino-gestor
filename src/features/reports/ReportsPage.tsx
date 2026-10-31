@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useFarm } from '@/app/farm'
 import { setUrlParams, useUrlParams } from '@/lib/urlState'
 import { useAccountBalances, useAccounts, useBatchResults, useBatches, useCategories, useTransactions } from '@/lib/queries'
-import { Empty, ErrorState, Loading, PageHeader } from '@/ui'
+import { Empty, ErrorState, Loading } from '@/ui'
 import { AccountDetail } from './AccountDetail'
 import { Batches } from './Batches'
 import { Spend } from './Spend'
@@ -65,11 +65,9 @@ function Reports() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title="Relatórios" sub={rangeText} right={
-        <Toolbar period={period} from={F} to={T} onPeriod={setPeriod} onCustom={setCustom}
-          acct={acct} onAcct={setAcct} accounts={accts} filtered={filtered} rangeText={rangeText}
-          onClear={() => setUrlParams({ period: null, from: null, to: null, acct: null, acc: null, accPage: null, ...chartReset })} onCsv={exportCsv} onPrint={() => window.print()} />
-      } />
+      <Toolbar period={period} from={F} to={T} onPeriod={setPeriod} onCustom={setCustom}
+        acct={acct} onAcct={setAcct} accounts={accts} filtered={filtered} rangeText={rangeText}
+        onClear={() => setUrlParams({ period: null, from: null, to: null, acct: null, acc: null, accPage: null, ...chartReset })} onCsv={exportCsv} onPrint={() => window.print()} />
       <KpiStrip s={stmt} />
       <Waterfall s={stmt} />
       <ResultDetails s={stmt} per={per} categories={categories.data ?? []} accounts={accts} buckets={buckets} />

@@ -94,10 +94,8 @@ function MoneyContent({ canWrite }: { canWrite: boolean }) {
       <MoneyHeader filters={filters} accounts={accounts.filter((a) => a.active)} filtered={isFiltered(filters)} canWrite={canWrite} onChange={patch} onClear={clear} onNew={() => openFin()} />
       <Kpis per={per} balance={balance} accountCount={filters.acct === 'all' ? accounts.length : 1} />
       <AccountsCard accounts={filters.acct === 'all' ? accounts : accounts.filter((a) => a.id === filters.acct)} balances={balances} txs={per} />
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,420px),1fr))] gap-4">
-        <TrendCard base={base} from={filters.period.from} to={filters.period.to} chart={chart} onChart={setChart} selKey={selKey} onSel={setSelKey} />
-        <CategoriesCard per={per} lookups={lookups} group={group} onGroup={setGroup} onPick={(cat) => setModal({ k: 'cat', cat })} />
-      </div>
+      <TrendCard base={base} from={filters.period.from} to={filters.period.to} chart={chart} onChart={setChart} selKey={selKey} onSel={setSelKey} />
+      <CategoriesCard per={per} lookups={lookups} group={group} onGroup={setGroup} onPick={(cat) => setModal({ k: 'cat', cat })} />
       <Commitments tab={tab} onTab={setTab} recs={recs} debts={debts} lookups={lookups} canWrite={canWrite}
         onAdd={() => setModal(tab === 'rec' ? { k: 'rec', item: null } : { k: 'debt', item: null })}
         onEditRec={(item) => setModal({ k: 'rec', item })} onEditDebt={(item) => setModal({ k: 'debt', item })}

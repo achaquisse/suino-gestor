@@ -93,7 +93,6 @@ export default function HelpPage() {
           <div className="text-sm text-muted">Fale com o veterinário ou com o suporte do Porkflow.</div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="soft" icon="call" onClick={() => toast('A ligar a Dr. Sitoe · +258 84 123 4567')}>Ligar ao veterinário</Button>
           <Button icon="mail" onClick={() => toast('Email aberto · suporte@porkflow.co.mz')}>Suporte</Button>
         </div>
       </Card>

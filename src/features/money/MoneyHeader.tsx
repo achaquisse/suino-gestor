@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Account } from '@/lib/database.types'
-import { Button, Icon, Input, PageHeader, Select, cx, usePopover } from '@/ui'
+import { Button, Icon, Input, Select, cx, usePopover } from '@/ui'
 import { PERIODS, makePeriod, periodBounds, periodLabel, rangeLabel, type Filters, type Period } from './model'
 
 function PeriodPicker({ period, onChange }: { period: Period; onChange: (p: Period) => void }) {
@@ -55,20 +55,14 @@ export default function MoneyHeader({ filters, accounts, filtered, canWrite, onC
   onChange: (p: Partial<Filters>) => void; onClear: () => void; onNew: () => void
 }) {
   return (
-    <PageHeader
-      title="Finanças"
-      sub={<span className="text-muted">{rangeLabel(filters.period.from, filters.period.to)}</span>}
-      right={
-        <>
-          <PeriodPicker key={filters.period.key + filters.period.from + filters.period.to} period={filters.period} onChange={(period) => onChange({ period })} />
-          <Select value={filters.acct} onChange={(e) => onChange({ acct: e.target.value })} className="h-11 w-auto! rounded-xl">
-            <option value="all">Todas as contas</option>
-            {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-          </Select>
-          {filtered && <Button variant="ghost" icon="close" className="text-accent-strong" onClick={onClear}>Limpar</Button>}
-          {canWrite && <Button variant="primary" icon="add" onClick={onNew}>Novo movimento</Button>}
-        </>
-      }
-    />
+    <div className="flex flex-wrap items-center gap-2 animate-pf-up">
+      <PeriodPicker key={filters.period.key + filters.period.from + filters.period.to} period={filters.period} onChange={(period) => onChange({ period })} />
+      <Select value={filters.acct} onChange={(e) => onChange({ acct: e.target.value })} className="h-11 w-auto! rounded-xl">
+        <option value="all">Todas as contas</option>
+        {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+      </Select>
+      {filtered && <Button variant="ghost" icon="close" className="text-accent-strong" onClick={onClear}>Limpar</Button>}
+      {canWrite && <Button variant="primary" icon="add" onClick={onNew}>Novo movimento</Button>}
+    </div>
   )
 }

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useFarm } from '@/app/farm'
 import { useOverlays } from '@/app/overlays'
-import { Breadcrumbs, Button, Card, Icon, SectionLabel, cx, useToast } from '@/ui'
+import { Breadcrumbs, Button, Card, Icon, SectionLabel, cx } from '@/ui'
 import type { HelpCtaTarget, HelpDoc, HelpImage } from '@/lib/database.types'
 import { docHref, docKind, docLook } from './helpers'
 import { useHelpLibrary } from './queries'
@@ -65,7 +65,6 @@ export default function DocView({ doc }: { doc: HelpDoc }) {
   const { canEditHerd } = useFarm()
   const { openLog } = useOverlays()
   const navigate = useNavigate()
-  const toast = useToast()
   const isGuide = doc.kind === 'guide'
   const { icon, tint, ink } = docLook(doc)
   const base = isGuide ? 'guide' : 'art'
@@ -86,7 +85,6 @@ export default function DocView({ doc }: { doc: HelpDoc }) {
   }
   const target = doc.cta_target
   const cta = doc.cta_label && target && (canEditHerd || target === 'settings' || target === 'reports') ? ([doc.cta_label, target] as const) : null
-  const callVet = () => toast('A ligar a Dr. Sitoe · +258 84 123 4567')
 
   return (
     <div className="flex flex-col gap-4 animate-pf-up">
@@ -193,9 +191,6 @@ export default function DocView({ doc }: { doc: HelpDoc }) {
                   <li key={i} className="flex gap-2.5 text-[15px] text-[#5C1712]"><Icon name="error" size={18} className="text-danger" />{w}</li>
                 ))}
               </ul>
-              <button type="button" onClick={callVet} className="flex h-11 items-center gap-2 self-start rounded-[13px] border-0 bg-danger px-4 text-sm font-semibold whitespace-nowrap text-white active:scale-[0.97]">
-                <Icon name="call" />Ligar ao veterinário
-              </button>
             </section>
           )}
         </div>
