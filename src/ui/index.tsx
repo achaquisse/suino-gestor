@@ -227,8 +227,9 @@ export function Stepper({ value, onChange, min = 0, max = 999 }: { value: number
   return (
     <div className="flex h-[46px] items-center overflow-hidden rounded-[13px] border border-line-strong bg-white">
       <button type="button" aria-label="Menos" onClick={() => onChange(Math.max(min, value - 1))} className="grid h-full w-11 place-items-center border-0 bg-transparent hover:bg-hover"><Icon name="remove" /></button>
-      <input value={value} onChange={(e) => { const n = parseInt(e.target.value, 10); onChange(Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : min) }}
-        inputMode="numeric" className="tabular h-full w-full min-w-0 border-0 text-center font-semibold outline-none" />
+      <input type="number" min={min} max={max} step={1} value={value}
+        onChange={(e) => { const n = Number(e.target.value); if (Number.isSafeInteger(n) && e.target.value !== '') onChange(Math.max(min, Math.min(max, n))) }}
+        className="tabular h-full w-full min-w-0 border-0 text-center font-semibold outline-none" />
       <button type="button" aria-label="Mais" onClick={() => onChange(Math.min(max, value + 1))} className="grid h-full w-11 place-items-center border-0 bg-transparent hover:bg-hover"><Icon name="add" /></button>
     </div>
   )

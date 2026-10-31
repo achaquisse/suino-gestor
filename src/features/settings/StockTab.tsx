@@ -47,10 +47,10 @@ function StockSheet({ draft, onClose }: { draft: Draft | null; onClose: () => vo
         {cats.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
       </Select></Field>
       <div className="grid grid-cols-2 gap-3"><Field label="Unidade"><Input value={d.unit} onChange={(e) => set('unit', e.target.value)} placeholder="sacos, doses, L..." /></Field>
-        <Field label="Preço por unidade (MT)"><Input inputMode="decimal" value={d.unit_price} onChange={(e) => set('unit_price', e.target.value)} /></Field></div>
-      <div className="grid grid-cols-3 gap-3"><Field label="Quantidade"><Input inputMode="decimal" value={d.qty} onChange={(e) => set('qty', e.target.value)} /></Field>
-        <Field label="Máximo"><Input inputMode="decimal" value={d.max_qty} onChange={(e) => set('max_qty', e.target.value)} /></Field>
-        <Field label="Mínimo"><Input inputMode="decimal" value={d.low_qty} onChange={(e) => set('low_qty', e.target.value)} /></Field></div>
+        <Field label="Preço por unidade (MT)"><Input type="number" min="0" step="any" value={d.unit_price} onChange={(e) => set('unit_price', e.target.value)} /></Field></div>
+      <div className="grid grid-cols-3 gap-3"><Field label="Quantidade"><Input type="number" min="0" step="any" value={d.qty} onChange={(e) => set('qty', e.target.value)} /></Field>
+        <Field label="Máximo"><Input type="number" min="0" step="any" value={d.max_qty} onChange={(e) => set('max_qty', e.target.value)} /></Field>
+        <Field label="Mínimo"><Input type="number" min="0" step="any" value={d.low_qty} onChange={(e) => set('low_qty', e.target.value)} /></Field></div>
       <Field label="Validade"><Input type="date" value={d.expires_on} onChange={(e) => set('expires_on', e.target.value)} /></Field>
       <Field label="Nota"><Input value={d.note} onChange={(e) => set('note', e.target.value)} /></Field>
       <div className="flex items-center justify-between"><span className="text-sm">Activo</span><Toggle checked={d.active} onChange={(v) => set('active', v)} label="Activo" /></div>

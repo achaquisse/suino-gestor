@@ -48,7 +48,7 @@ function AccountSheet({ draft, onClose }: { draft: Draft | null; onClose: () => 
           <Select value={d.kind} onChange={(e) => set('kind', e.target.value as AccountKind)}>{KINDS.map((k) => <option key={k}>{k}</option>)}</Select>
         </Field>
         <Field label="Titular"><Input value={d.holder} onChange={(e) => set('holder', e.target.value)} /></Field>
-        <Field label="Saldo inicial (MT)"><Input inputMode="decimal" value={d.initial} onChange={(e) => set('initial', e.target.value)} /></Field>
+        <Field label="Saldo inicial (MT)"><Input type="number" step="any" value={d.initial} onChange={(e) => set('initial', e.target.value)} /></Field>
         <div className="flex flex-col gap-1.5"><span className="text-[13px] font-semibold text-ink-2">Cor</span><Swatches value={d.color} onChange={(c) => set('color', c)} /></div>
         <div className="flex items-center justify-between"><span className="text-sm">Conta activa</span><Toggle checked={d.active} onChange={(v) => set('active', v)} label="Conta activa" /></div>
         <FormError>{error}</FormError>

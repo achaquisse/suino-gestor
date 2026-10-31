@@ -32,6 +32,7 @@ export type Task = {
   id: string; farm_id: string; title: string; location: string; pen_id: string | null; due_date: string; due_time: string | null
   assignee: string; action: string | null; done_at: string | null; done_by: string | null; created_at: string
 }
+export type NotificationResolution = { farm_id: string; user_id: string; alert_key: string; resolved_at: string }
 export type StockItem = {
   id: string; farm_id: string; code: string; name: string; unit: string; qty: number; max_qty: number; low_qty: number
   note: string; expires_on: string | null; category: string; unit_price: number | null; active: boolean; created_at: string
@@ -103,6 +104,7 @@ export type Database = {
       events: Table<FarmEvent, 'detail' | 'animal_id' | 'pen_id' | 'meta' | 'show_in_calendar' | 'created_by' | 'created_by_name'>
       weights: Table<Weight>
       tasks: Table<Task, 'location' | 'pen_id' | 'due_time' | 'assignee' | 'action' | 'done_at' | 'done_by'>
+      notification_resolutions: Table<NotificationResolution, 'resolved_at'>
       stock_items: Table<StockItem, 'unit' | 'qty' | 'max_qty' | 'low_qty' | 'note' | 'expires_on' | 'category' | 'unit_price' | 'active'>
       treatment_products: Table<TreatmentProduct, 'dose_ml' | 'per_kg' | 'dose_text' | 'route' | 'withdrawal_days' | 'stock_code' | 'help_kind' | 'help_slug' | 'active'>
       breeds: Table<Breed, 'active'>

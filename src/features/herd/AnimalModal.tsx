@@ -102,7 +102,7 @@ function BuyForm({ penId, onClose }: { penId?: string; onClose: () => void }) {
       ) : (
         <div className="flex flex-col gap-3.5">
           <Row>
-            <Field label="Quantidade"><Input inputMode="numeric" value={qty} onChange={(e) => setQty(e.target.value.replace(/\D/g, ''))} /></Field>
+            <Field label="Quantidade"><Input type="number" min="1" step="1" value={qty} onChange={(e) => setQty(e.target.value)} /></Field>
             <Field label="Fase">
               <Select value={stage} onChange={(e) => setStage(e.target.value as Stage)}>{STAGES.map((s) => <option key={s}>{s}</option>)}</Select>
             </Field>
@@ -114,7 +114,7 @@ function BuyForm({ penId, onClose }: { penId?: string; onClose: () => void }) {
             <Field label="Raça">
               <Select value={breed || breeds[0]?.name || ''} onChange={(e) => setBreed(e.target.value)}>{breeds.map((b) => <option key={b.id} value={b.name}>{b.name}</option>)}</Select>
             </Field>
-            <Field label="Peso médio (kg)"><Input inputMode="decimal" value={kg} onChange={(e) => setKg(e.target.value)} placeholder="ex. 12" /></Field>
+            <Field label="Peso médio (kg)"><Input type="number" min="0" step="any" value={kg} onChange={(e) => setKg(e.target.value)} placeholder="ex. 12" /></Field>
           </Row>
           <Field label="Curral">
             <Select value={penId2} onChange={(e) => setPen(e.target.value)}>
@@ -126,7 +126,7 @@ function BuyForm({ penId, onClose }: { penId?: string; onClose: () => void }) {
             <Field label="Fornecedor"><Input value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="ex. Granja Beira" /></Field>
           </Row>
           <Row>
-            <Field label="Valor total (MT)"><Input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0" /></Field>
+            <Field label="Valor total (MT)"><Input type="number" min="0" step="any" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0" /></Field>
             <Field label="Conta de pagamento">
               <Select value={accountId} onChange={(e) => setAccount(e.target.value)}>{accs.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</Select>
             </Field>

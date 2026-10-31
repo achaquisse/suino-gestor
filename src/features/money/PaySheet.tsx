@@ -85,7 +85,7 @@ export function PayDebtSheet({ item, lookups, onClose }: { item: Debt; lookups: 
           { k: 'Prestação', v: `${fmt(Math.min(item.installment, rem))} MT` },
           { k: 'Vencimento', v: item.next_due ? dLong(item.next_due) : '—' },
         ]} />
-        <Field label="Valor pago (MT)" hint="Pode pagar mais que a prestação para amortizar."><Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" /></Field>
+        <Field label="Valor pago (MT)" hint="Pode pagar mais que a prestação para amortizar."><Input type="number" min="0" step="any" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" /></Field>
         <Field label="Contas utilizadas">
           <div className="rounded-[13px] border border-line-strong bg-[#F7F7FB] px-3 py-3 text-sm">{splitLabel(splitsOf(item), lookups.accountName)}</div>
         </Field>

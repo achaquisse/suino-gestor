@@ -1,8 +1,11 @@
-import { Suspense, useLayoutEffect, useRef, useState } from 'react'
+import { Suspense, useId, useLayoutEffect, useRef, useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import { NavLink, Outlet, useLocation, useMatch, useNavigate, useParams } from 'react-router'
 import { Avatar, Icon, Loading, cx, usePopover, useToast } from '@/ui'
 import { ROLE_LABEL } from '@/lib/constants'
-import { useAnimal } from '@/lib/queries'
+import { useAnimal, useInvalidateFarm, useNotificationResolutions } from '@/lib/queries'
+import { errorMessage, supabase } from '@/lib/supabase'
+import { useAlerts } from '@/features/today/useAlerts'
 import { useAuth } from './auth'
 import { useFarm } from './farm'
 import { useOverlays } from './overlays'
@@ -12,7 +15,6 @@ type NavDef = { to: string; label: string; icon: string; end?: boolean }
 function useNavDefs(): NavDef[] {
   const { canSeeMoney } = useFarm()
   const all: (NavDef & { money?: boolean })[] = [
-    { to: '/', label: 'Hoje', icon: 'today', end: true },
     { to: '/herd', label: 'Animais', icon: 'fence' },
     { to: '/money', label: 'Finanças', icon: 'savings', money: true },
     { to: '/reports', label: 'Relatórios', icon: 'monitoring', money: true },
@@ -120,6 +122,62 @@ function UserMenu({ compact }: { compact?: boolean }) {
   )
 }
 
+function NotificationMenu({ compact }: { compact?: boolean }) {
+  const { farmId, user } = useFarm()
+  const alerts = useAlerts()
+  const resolutions = useNotificationResolutions()
+  const invalidate = useInvalidateFarm()
+  const toast = useToast()
+  const { open, setOpen, ref } = usePopover()
+  const panelId = useId()
+  const visible = resolutions.data ? alerts.filter((a) => !resolutions.data.some((r) => r.alert_key === a.key)) : []
+  const resolve = useMutation({
+    mutationFn: async (key: string) => {
+      const { error } = await supabase.from('notification_resolutions').insert({ farm_id: farmId, user_id: user.id, alert_key: key })
+      if (error) throw error
+    },
+    onSuccess: invalidate,
+    onError: (error) => toast(errorMessage(error), 'error'),
+  })
+
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button type="button" aria-label={`Notificações${visible.length ? `: ${visible.length} por tratar` : ''}`} aria-expanded={open} aria-controls={panelId}
+        onClick={() => setOpen((value) => !value)}
+        className={cx('relative grid h-11 w-11 place-items-center rounded-full border border-line bg-white text-ink-2 hover:border-[#D4D4E2] hover:text-accent-strong', compact && 'h-10 w-10')}>
+        <Icon name="notifications" size={23} />
+        {visible.length > 0 && <span className="tabular absolute -top-1 -right-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-danger px-1 text-[11px] font-bold text-white">{visible.length > 99 ? '99+' : visible.length}</span>}
+      </button>
+      {open && (
+        <div id={panelId} role="region" aria-label="Notificações" className={cx('absolute top-[52px] z-40 w-[min(360px,calc(100vw-24px))] overflow-hidden rounded-[18px] border border-line bg-white shadow-pop', compact ? '-right-[52px]' : 'right-0')}>
+          <div className="flex items-center justify-between border-b border-divider px-4 py-3">
+            <h2 className="m-0 text-[15px] font-semibold">Notificações</h2>
+            <span className="tabular text-xs text-muted">{visible.length} por tratar</span>
+          </div>
+          <div className="max-h-[min(480px,65vh)] overflow-y-auto">
+            {resolutions.isPending && <div className="p-5"><Loading /></div>}
+            {resolutions.isError && <div className="p-4 text-sm text-danger">Não foi possível carregar as notificações. <button type="button" onClick={() => resolutions.refetch()} className="border-0 bg-transparent font-semibold text-accent-strong">Tentar novamente</button></div>}
+            {resolutions.isSuccess && visible.length === 0 && <div className="px-4 py-6 text-center text-sm text-muted">Sem notificações por tratar.</div>}
+            {visible.map((alert) => (
+              <div key={alert.key} className="flex gap-3 border-b border-divider px-4 py-3 last:border-0">
+                <span className={cx('grid h-9 w-9 shrink-0 place-items-center rounded-[10px]', alert.red ? 'bg-danger-soft text-danger' : 'bg-sunken text-ink-2')}><Icon name={alert.icon} size={19} /></span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-semibold">{alert.title}</div>
+                  <div className="mt-0.5 text-xs text-muted">{alert.sub}</div>
+                  <div className="mt-2 flex flex-wrap items-center gap-3">
+                    <button type="button" onClick={() => { setOpen(false); alert.act() }} className="border-0 bg-transparent p-0 text-xs font-semibold text-accent-strong hover:underline">{alert.action}</button>
+                    {alert.dismissible && <button type="button" disabled={resolve.isPending} onClick={() => resolve.mutate(alert.key)} className="border-0 bg-transparent p-0 text-xs font-medium text-muted hover:text-ink disabled:opacity-50">Marcar como resolvido</button>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function Shell() {
   const navDefs = useNavDefs()
   const location = useLocation()
@@ -161,6 +219,7 @@ export function Shell() {
               className="ml-1.5 flex h-11 items-center gap-1.5 whitespace-nowrap rounded-[14px] border-0 bg-cta px-[18px] font-semibold text-white shadow-cta hover:bg-cta-hover hover:shadow-cta-hover active:scale-[0.97]">
               <Icon name="add" />Novo
             </button>
+            <NotificationMenu />
             <UserMenu />
           </header>
         </div>
@@ -172,6 +231,7 @@ export function Shell() {
             <span className="truncate text-sm font-semibold">{farm.name}</span>
             {memberships.length > 1 && <Icon name="expand_more" size={16} className="text-muted" />}
           </button>
+          <NotificationMenu compact />
           <UserMenu compact />
         </div>
 

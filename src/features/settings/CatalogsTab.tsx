@@ -41,11 +41,11 @@ function ProductSheet({ draft, onClose }: { draft: Draft | null; onClose: () => 
     <div className="flex flex-col gap-3.5">
       <div className="grid grid-cols-2 gap-3"><Field label="Código"><Input value={d.code} onChange={(e) => set('code', e.target.value)} /></Field>
         <Field label="Nome"><Input value={d.name} onChange={(e) => set('name', e.target.value)} /></Field></div>
-      <div className="grid grid-cols-2 gap-3"><Field label="Dose (ml)"><Input inputMode="decimal" value={d.dose_ml} onChange={(e) => set('dose_ml', e.target.value)} /></Field>
-        <Field label="Por kg de peso"><Input inputMode="decimal" value={d.per_kg} onChange={(e) => set('per_kg', e.target.value)} /></Field></div>
+      <div className="grid grid-cols-2 gap-3"><Field label="Dose (ml)"><Input type="number" min="0" step="any" value={d.dose_ml} onChange={(e) => set('dose_ml', e.target.value)} /></Field>
+        <Field label="Por kg de peso"><Input type="number" min="0" step="any" value={d.per_kg} onChange={(e) => set('per_kg', e.target.value)} /></Field></div>
       <Field label="Dose alternativa"><Input value={d.dose_text} onChange={(e) => set('dose_text', e.target.value)} /></Field>
       <Field label="Via"><Input value={d.route} onChange={(e) => set('route', e.target.value)} /></Field>
-      <div className="grid grid-cols-2 gap-3"><Field label="Carência (dias)"><Input inputMode="numeric" value={d.withdrawal_days} onChange={(e) => set('withdrawal_days', e.target.value)} /></Field>
+      <div className="grid grid-cols-2 gap-3"><Field label="Carência (dias)"><Input type="number" min="0" step="1" value={d.withdrawal_days} onChange={(e) => set('withdrawal_days', e.target.value)} /></Field>
         <Field label="Artigo de stock"><Select value={d.stock_code} onChange={(e) => set('stock_code', e.target.value)}>
           <option value="">Sem associação</option>{stock.map((s) => <option key={s.id} value={s.code}>{s.name}</option>)}
         </Select></Field></div>

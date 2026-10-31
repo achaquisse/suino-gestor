@@ -35,7 +35,7 @@ function ParamSheet({ param, onClose }: { param: Parameter | null; onClose: () =
       <div className="flex flex-col gap-3.5">
         {param?.description && <p className="m-0 text-[13px] text-muted">{param.description}</p>}
         <Field label={`Valor${param?.unit ? ` (${param.unit})` : ''}`}>
-          <Input inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} autoFocus />
+          <Input type="number" step="any" value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} autoFocus />
         </Field>
         <FormError>{error}</FormError>
       </div>

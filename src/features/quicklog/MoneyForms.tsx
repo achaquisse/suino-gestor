@@ -17,7 +17,7 @@ export function SaleForm({ ctx, onBack, onClose }: FormProps) {
   const { pending, error, run } = useSubmit(ctx, onClose)
   const initial = firstId(ctx, list)
   const [animal, setAnimal] = useState(initial)
-  const [kgText, setKgText] = useState(() => String(animals.find((a) => a.id === initial)?.weight_kg ?? '').replace('.', ','))
+  const [kgText, setKgText] = useState(() => String(animals.find((a) => a.id === initial)?.weight_kg ?? ''))
   const [priceText, setPriceText] = useState<string | null>(null)
   const [buyer, setBuyer] = useState('')
   const [account, setAccount] = useState('')
@@ -32,7 +32,7 @@ export function SaleForm({ ctx, onBack, onClose }: FormProps) {
   const pick = (id: string) => {
     setAnimal(id)
     const w = animals.find((x) => x.id === id)?.weight_kg
-    if (w != null) setKgText(String(w).replace('.', ','))
+    if (w != null) setKgText(String(w))
   }
 
   const submit = () => run(async () => {
@@ -55,10 +55,10 @@ export function SaleForm({ ctx, onBack, onClose }: FormProps) {
       {blocked && a?.withdrawal_until && <p className="m-0 text-[13px] text-danger">Em carência até {a.withdrawal_until.split('-').reverse().join('/')} · venda bloqueada.</p>}
       <div className="grid grid-cols-2 gap-3">
         <Field label="Peso vivo (kg)" hint={a ? `Último peso: ${dec(a.weight_kg)} kg` : undefined}>
-          <Input value={kgText} onChange={(e) => setKgText(e.target.value)} inputMode="decimal" className="tabular" />
+          <Input value={kgText} onChange={(e) => setKgText(e.target.value)} type="number" min="0" step="any" className="tabular" />
         </Field>
         <Field label="Preço por kg (MT)">
-          <Input value={priceText ?? String(defaultPrice).replace('.', ',')} onChange={(e) => setPriceText(e.target.value)} inputMode="decimal" className="tabular" />
+          <Input value={priceText ?? String(defaultPrice)} onChange={(e) => setPriceText(e.target.value)} type="number" min="0" step="any" className="tabular" />
         </Field>
       </div>
       <Field label="Comprador"><Input value={buyer} onChange={(e) => setBuyer(e.target.value)} placeholder="Opcional" /></Field>

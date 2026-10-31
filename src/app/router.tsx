@@ -1,4 +1,4 @@
-import { createBrowserRouter, Outlet } from 'react-router'
+import { createBrowserRouter, Navigate, Outlet } from 'react-router'
 import { ErrorState, Loading } from '@/ui'
 import { bindRouter } from '@/lib/urlState'
 import { useAuth } from './auth'
@@ -44,7 +44,7 @@ export const router = createBrowserRouter([
       {
         element: <FarmGate />,
         children: [
-          { index: true, lazy: page(() => import('@/features/today/TodayPage')) },
+          { index: true, element: <Navigate to="/herd" replace /> },
           { path: 'herd', lazy: page(() => import('@/features/herd/HerdPage')) },
           { path: 'herd/pens/:penId', lazy: page(() => import('@/features/herd/PenPage')) },
           { path: 'herd/animals/:tag', lazy: page(() => import('@/features/herd/AnimalPage')) },

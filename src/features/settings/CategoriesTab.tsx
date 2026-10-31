@@ -50,7 +50,7 @@ function CategorySheet({ draft, onClose }: { draft: Draft | null; onClose: () =>
         <Field label="Natureza"><Select value={d.item_type} onChange={(e) => set('item_type', e.target.value as Category['item_type'])}><option>Serviço</option><option>Produto</option></Select></Field>
         {d.item_type === 'Produto' && <div className="grid grid-cols-2 gap-3">
           <Field label="Unidade"><Input value={d.quantity_unit} onChange={(e) => set('quantity_unit', e.target.value)} placeholder="kg, saco, un..." /></Field>
-          <Field label="Preço base por unidade (MT)"><Input value={d.baseline_price} onChange={(e) => set('baseline_price', e.target.value)} inputMode="decimal" placeholder="0" /></Field>
+          <Field label="Preço base por unidade (MT)"><Input type="number" min="0" step="any" value={d.baseline_price} onChange={(e) => set('baseline_price', e.target.value)} placeholder="0" /></Field>
         </div>}
         <Field label="Descrição"><Input value={d.description} onChange={(e) => set('description', e.target.value)} /></Field>
         <div className="flex flex-col gap-1.5"><span className="text-[13px] font-semibold text-ink-2">Cor</span><Swatches value={d.color} onChange={(c) => set('color', c)} /></div>

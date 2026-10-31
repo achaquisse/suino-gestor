@@ -198,7 +198,7 @@ export function WeightForm({ ctx, onBack, onClose }: FormProps) {
       {ctx.animalId ? <LockedAnimal animal={a} penName={penName(a?.pen_id ?? null)} /> : <AnimalSelect animals={list} penName={penName} value={animal} onChange={setAnimal} />}
       <Field label="Peso (kg)" hint={hint}>
         <div className="relative">
-          <Input value={kgText} onChange={(e) => setKgText(e.target.value)} inputMode="decimal" placeholder="0,0" autoFocus className="tabular pr-10 text-lg font-semibold" />
+          <Input type="number" min="0" step="any" value={kgText} onChange={(e) => setKgText(e.target.value)} placeholder="0.0" autoFocus className="tabular pr-10 text-lg font-semibold" />
           <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-muted">kg</span>
         </div>
       </Field>

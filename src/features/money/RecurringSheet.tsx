@@ -75,7 +75,7 @@ export default function RecurringSheet({ item, onClose }: { item: RecurringExpen
             <Segmented className="w-full [&>button]:flex-1" options={[['Fixo', 'Fixo'], ['Variável', 'Variável']] as const} value={costType} onChange={setCostType} />
           </Field>
           <Field label={costType === 'Variável' ? 'Valor estimado (MT)' : 'Valor (MT)'}>
-            <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" />
+            <Input type="number" min="0" step="any" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" />
           </Field>
           <Field label="Categoria">
             <Select value={cat} onChange={(e) => setCategory(e.target.value)}>

@@ -76,9 +76,9 @@ export default function DebtSheet({ item, onClose }: { item: Debt | null; onClos
         <div className="flex flex-col gap-4">
           <Field label="Credor"><Input value={creditor} onChange={(e) => setCreditor(e.target.value)} placeholder="ex. Banco, fornecedor, pessoa" /></Field>
           <Field label="Descrição"><Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="ex. Ração a crédito" /></Field>
-          <Field label="Valor total (MT)"><Input type="number" value={total} onChange={(e) => setTotal(e.target.value)} placeholder="0" /></Field>
-          <Field label="Já pago (MT)"><Input type="number" value={paid} onChange={(e) => setPaid(e.target.value)} placeholder="0" /></Field>
-          <Field label="Prestação (MT)" hint="Valor sugerido em cada pagamento."><Input type="number" value={installment} onChange={(e) => setInstallment(e.target.value)} placeholder="0" /></Field>
+          <Field label="Valor total (MT)"><Input type="number" min="0" step="any" value={total} onChange={(e) => setTotal(e.target.value)} placeholder="0" /></Field>
+          <Field label="Já pago (MT)"><Input type="number" min="0" step="any" value={paid} onChange={(e) => setPaid(e.target.value)} placeholder="0" /></Field>
+          <Field label="Prestação (MT)" hint="Valor sugerido em cada pagamento."><Input type="number" min="0" step="any" value={installment} onChange={(e) => setInstallment(e.target.value)} placeholder="0" /></Field>
           <Field label="Próximo vencimento"><Input type="date" value={nextDue} onChange={(e) => setNextDue(e.target.value)} /></Field>
           <div className="flex flex-col gap-2">
             <span className="text-[13px] font-semibold text-ink-2">Contas de pagamento</span>

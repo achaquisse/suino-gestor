@@ -17,7 +17,7 @@ export default function SplitEditor({ value, onChange, accounts, amount }: { val
   const setAccount = (i: number, id: string) => onChange(value.map((s, j) => (j === i ? { ...s, account_id: id } : s)))
   const setPct = (i: number, v: string) => {
     if (n === 2) {
-      const other = String(Math.max(0, 100 - (parseFloat(v) || 0)))
+      const other = String(Math.max(0, 100 - (numP(v) || 0)))
       onChange(value.map((s, j) => (j === i ? { ...s, pct: v } : { ...s, pct: other })))
     } else onChange(value.map((s, j) => (j === i ? { ...s, pct: v } : s)))
   }
@@ -41,7 +41,7 @@ export default function SplitEditor({ value, onChange, accounts, amount }: { val
             {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
           </Select>
           <label className={cx('flex h-11 items-center gap-1 rounded-[12px] border border-line-strong px-2.5', n === 1 ? 'bg-[#F7F7FB]' : 'bg-white')}>
-            <input type="number" min={1} max={100} value={s.pct} disabled={n === 1} aria-label="Percentagem"
+            <input type="number" min={1} max={100} step="any" value={s.pct} disabled={n === 1} aria-label="Percentagem"
               onChange={(e) => setPct(i, e.target.value)}
               className="tabular w-full min-w-0 border-0 bg-transparent text-right text-sm outline-none" />
             <span className="text-sm text-muted">%</span>

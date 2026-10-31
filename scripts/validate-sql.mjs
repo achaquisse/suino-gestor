@@ -9,6 +9,8 @@ grant usage on schema auth to authenticated; grant execute on all functions in s
 set request.jwt.claim.sub = '${uid}'; set request.jwt.claim.email = 'owner@example.com'; set role authenticated;`);
 const farm = (await db.query(`select public.create_farm('Granja Boane', true) as id`)).rows[0].id;
 const q = async (sql, p = []) => (await db.query(sql, p)).rows;
+await q(`insert into notification_resolutions (farm_id, user_id, alert_key) values ($1, $2, 'farrow-test')`, [farm, uid]);
+assert.equal((await q(`select alert_key from notification_resolutions where farm_id = $1`, [farm]))[0].alert_key, 'farrow-test');
 assert.equal(Number((await q(`select count(*) from treatment_products where farm_id = $1`, [farm]))[0].count), 7);
 assert.equal(Number((await q(`select count(*) from breeds where farm_id = $1`, [farm]))[0].count), 7);
 assert.equal(Number((await q(`select count(*) from symptoms where farm_id = $1`, [farm]))[0].count), 7);
@@ -106,6 +108,10 @@ console.log(await q(`select title, done_at is not null done from tasks order by 
 await db.exec(`reset role; insert into auth.users values ('22222222-2222-2222-2222-222222222222','joao.mabunda@example.com','{}'); set request.jwt.claim.sub='22222222-2222-2222-2222-222222222222'; set request.jwt.claim.email='joao.mabunda@example.com'; set role authenticated;`);
 console.log('accept', await q(`select public.accept_invites()`));
 console.log('caretaker sees txs:', (await q(`select count(*) from transactions`))[0], 'animals:', (await q(`select count(*) from animals`))[0]);
+assert.equal(Number((await q(`select count(*) from notification_resolutions where farm_id = $1`, [farm]))[0].count), 0);
+await assert.rejects(q(`insert into notification_resolutions (farm_id, user_id, alert_key) values ($1, $2, 'other-user')`, [farm, uid]));
+await q(`insert into notification_resolutions (farm_id, user_id, alert_key) values ($1, '22222222-2222-2222-2222-222222222222', 'farrow-test')`, [farm]);
+assert.equal(Number((await q(`select count(*) from notification_resolutions where farm_id = $1`, [farm]))[0].count), 1);
 assert.equal(Number((await q(`select count(*) from treatment_products where farm_id = $1`, [farm]))[0].count), 8);
 assert.equal(Number((await q(`select count(*) from breeds where farm_id = $1`, [farm]))[0].count), 8);
 assert.equal(Number((await q(`select count(*) from symptoms where farm_id = $1`, [farm]))[0].count), 8);

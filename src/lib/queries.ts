@@ -76,6 +76,14 @@ export const useTasks = (from?: string, to?: string) =>
     if (error) throw error
     return data ?? []
   })
+export const useNotificationResolutions = () => {
+  const { user } = useFarm()
+  return useFarmQuery(['notification_resolutions', user.id], async (f) => {
+    const { data, error } = await supabase.from('notification_resolutions').select('alert_key').eq('farm_id', f).eq('user_id', user.id)
+    if (error) throw error
+    return data ?? []
+  })
+}
 export const useStock = () =>
   useFarmQuery(['stock'], async (f) => num(await selectAll('stock_items', f, { column: 'name' }), ['qty', 'max_qty', 'low_qty', 'unit_price']))
 export const useTreatmentProducts = () =>

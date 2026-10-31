@@ -150,7 +150,7 @@ function FinForm({ preset, onClose }: { preset?: FinPreset; onClose: () => void 
         </div>
 
         {!product && <Field label="Valor (MT)">
-          <Input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder="0" autoFocus
+          <Input type="number" min="0" step="any" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" autoFocus
             className="tabular h-14 rounded-[14px] px-4 text-[22px] font-semibold" />
         </Field>}
 
@@ -192,8 +192,8 @@ function FinForm({ preset, onClose }: { preset?: FinPreset; onClose: () => void 
         </Field>}
 
         {product && <div className="grid grid-cols-2 gap-3">
-          <Field label={`Quantidade (${unit})`}><Input value={quantityText} onChange={(e) => setQuantityText(e.target.value)} inputMode="decimal" placeholder="0" /></Field>
-          <Field label={`Preço por ${unit} (MT)`}><Input value={priceText} onChange={(e) => setPricePick({ category: cat, stockId, text: e.target.value })} inputMode="decimal" placeholder="0" /></Field>
+          <Field label={`Quantidade (${unit})`}><Input type="number" min="0" step="any" value={quantityText} onChange={(e) => setQuantityText(e.target.value)} placeholder="0" /></Field>
+          <Field label={`Preço por ${unit} (MT)`}><Input type="number" min="0" step="any" value={priceText} onChange={(e) => setPricePick({ category: cat, stockId, text: e.target.value })} placeholder="0" /></Field>
         </div>}
 
         <div className="flex flex-col gap-1.5">
@@ -227,7 +227,7 @@ function FinForm({ preset, onClose }: { preset?: FinPreset; onClose: () => void 
           </Select>
         </Field>}
         {allocationMode !== 'none' && selectedBatches.map((id, i) => <Field key={id} label={`${batches.find((b) => b.id === id)?.code ?? 'Lote'} · ${allocationMode === 'percent' ? '%' : 'MT'}`}>
-          <Input value={share(id, i)} onChange={(e) => setBatchShares((prev) => ({ ...prev, [id]: e.target.value }))} inputMode="decimal" />
+          <Input type="number" min="0" step="any" value={share(id, i)} onChange={(e) => setBatchShares((prev) => ({ ...prev, [id]: e.target.value }))} />
         </Field>)}
 
         <input ref={fileRef} type="file" multiple accept="image/*,application/pdf" hidden
