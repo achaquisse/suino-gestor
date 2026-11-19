@@ -1,18 +1,11 @@
 import { SWATCH } from '@/lib/constants'
 import type { Account, AccountBalance, Category, Transaction } from '@/lib/database.types'
-import { addDays, dISO, dShort, dUTC, isoOf, MONTHS, MONTHS3, pad, todayISO } from '@/lib/format'
+import { addDays, dISO, dShort, dUTC, MONTHS, MONTHS3, pad } from '@/lib/format'
+import { DEFAULT_PERIOD, PERIODS, isPreset, presetRange, type PresetKey } from '@/lib/periods'
 
-export type Period = 'mes' | '3m' | 'ano' | 'custom'
-export const PERIODS: readonly (readonly [Exclude<Period, 'custom'>, string])[] = [['mes', 'Este mês'], ['3m', 'Últimos 3 meses'], ['ano', 'Este ano']]
-
-export const periodRange = (p: Exclude<Period, 'custom'>, today = todayISO()): [string, string] => {
-  const y = +today.slice(0, 4)
-  const m = +today.slice(5, 7)
-  if (p === 'mes') return [`${y}-${pad(m)}-01`, today]
-  if (p === 'ano') return [`${y}-01-01`, today]
-  const d = new Date(y, m - 3, 1)
-  return [isoOf(d), today]
-}
+export type Period = PresetKey | 'custom'
+export { PERIODS, DEFAULT_PERIOD, isPreset }
+export const periodRange = (p: PresetKey, start?: string | null): [string, string] => presetRange(p, start)
 
 export const rangeLabel = (f: string, t: string) =>
   f === t ? `${dShort(f)} ${f.slice(0, 4)}` : `${dShort(f)}${f.slice(0, 4) === t.slice(0, 4) ? '' : ' ' + f.slice(0, 4)} – ${dShort(t)} ${t.slice(0, 4)}`
@@ -60,7 +53,7 @@ export function statement(per: Transaction[], categories: Category[]): Statement
   const groups = new Map(categories.map((c) => [c.name, c.grp]))
   const isDirect = (name: string) => name !== 'Infra-estrutura' && groups.get(name) === 'Investimento'
   const isOpex = (name: string) => groups.get(name) === 'Operacional'
-  const inc = per.filter((t) => t.amount > 0 && t.category !== 'Aporte')
+  const inc = per.filter((t) => t.amount > 0 && t.category !== 'Injeção de capital')
   const byCat = (rows: Transaction[]) => {
     const values = new Map<string, number>()
     for (const t of rows) values.set(t.category, (values.get(t.category) ?? 0) + Math.abs(t.amount))

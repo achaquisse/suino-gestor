@@ -1,6 +1,7 @@
 import { useOverlays } from '@/app/overlays'
 import { useStock } from '@/lib/queries'
 import { Button, Card, Progress } from '@/ui'
+import { qtyLabel } from '@/features/stock/model'
 
 export default function StockCard() {
   const { openLog } = useOverlays()
@@ -23,7 +24,7 @@ export default function StockCard() {
           <div key={s.id} className="flex flex-col gap-1.5 border-t border-divider px-[18px] py-3">
             <div className="flex items-baseline justify-between gap-3">
               <span className="font-medium">{s.name}</span>
-              <span className="tabular text-sm" style={{ color: isLow ? 'var(--color-danger)' : '#4A4A5C' }}>{s.qty} {s.unit}</span>
+              <span className="tabular text-sm" style={{ color: isLow ? 'var(--color-danger)' : '#4A4A5C' }}>{qtyLabel(s.qty, s)}</span>
             </div>
             <Progress value={s.max_qty ? (s.qty / s.max_qty) * 100 : 0} color={isLow ? 'var(--color-danger)' : 'var(--color-accent)'} height={4} />
             {(s.note || isLow) && <div className="text-[13px] text-muted">{isLow ? `Baixo${s.note ? ' · ' + s.note : ''}` : s.note}</div>}

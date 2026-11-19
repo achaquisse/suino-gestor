@@ -2,21 +2,23 @@ import { useMemo, useRef, useState } from 'react'
 import type { FinPreset } from '@/app/overlays'
 import { useFarm } from '@/app/farm'
 import { fmt, numP, todayISO, validDate } from '@/lib/format'
-import { useAccountBalances, useAccounts, useBatches, useCategories, useCreateTransaction, useStock } from '@/lib/queries'
+import { useAccountBalances, useAccounts, useBatches, useCategories, useCreateTransaction, useStock, useTableMutations } from '@/lib/queries'
 import { errorMessage } from '@/lib/supabase'
 import type { TxKind } from '@/lib/database.types'
 import { Button, Empty, Field, FormError, Icon, Input, Select, Sheet, Textarea, cx, useToast } from '@/ui'
 import SplitEditor from './SplitEditor'
 import { splitCheck, toSplits, type SplitDraft } from './model'
 
-type Kind = 'Despesa' | 'Receita'
+// Expenses only: income is recorded through the sale form (Registar → Venda).
+
+const NEW_ITEM = '__new'
 
 export default function FinSheet({ preset, onClose }: { preset?: FinPreset; onClose: () => void }) {
   const { isOwner } = useFarm()
   if (!isOwner) {
     return (
-      <Sheet open onClose={onClose} title="Novo movimento" maxWidth={560}>
-        <Empty icon="lock" title="Apenas o proprietário regista movimentos" sub="O seu perfil tem acesso de leitura às finanças." />
+      <Sheet open onClose={onClose} title="Nova despesa" maxWidth={560}>
+        <Empty icon="lock" title="Apenas o proprietário regista despesas" sub="O seu perfil tem acesso de leitura às despesas." />
       </Sheet>
     )
   }
@@ -31,6 +33,7 @@ function FinForm({ preset, onClose }: { preset?: FinPreset; onClose: () => void 
   const batchesQ = useBatches()
   const stockQ = useStock()
   const create = useCreateTransaction()
+  const newItem = useTableMutations('stock_items')
   const fileRef = useRef<HTMLInputElement>(null)
 
   const accounts = useMemo(() => (accountsQ.data ?? []).filter((a) => a.active), [accountsQ.data])
@@ -38,9 +41,7 @@ function FinForm({ preset, onClose }: { preset?: FinPreset; onClose: () => void 
   const batches = useMemo(() => (batchesQ.data ?? []).filter((b) => b.active), [batchesQ.data])
   const stock = useMemo(() => (stockQ.data ?? []).filter((s) => s.active), [stockQ.data])
 
-  const initialType: Kind = preset?.type === 'Receita' || preset?.type === 'Aporte' ? 'Receita' : 'Despesa'
-  const [type, setType] = useState<Kind>(initialType)
-  const [catPick, setCatPick] = useState<string | null>(preset?.stockCode ? null : preset?.category ?? (preset?.type === 'Aporte' ? 'Aporte' : preset?.type === 'Investimento' ? 'Infra-estrutura' : null))
+  const [catPick, setCatPick] = useState<string | null>(preset?.stockCode ? null : preset?.category ?? (preset?.type === 'Investimento' ? 'Infra-estrutura' : null))
   const [stockPick, setStockPick] = useState<string | null>(null)
   const [catOpen, setCatOpen] = useState(false)
   const [catFilter, setCatFilter] = useState('')
@@ -56,17 +57,21 @@ function FinForm({ preset, onClose }: { preset?: FinPreset; onClose: () => void 
   const [batchShares, setBatchShares] = useState<Record<string, string>>({})
   const [files, setFiles] = useState<File[]>([])
   const [splitPick, setSplitPick] = useState<SplitDraft[] | null>(null)
+  const [newName, setNewName] = useState('')
   const [error, setError] = useState('')
   const [detailsOpen, setDetailsOpen] = useState(false)
 
-  const catOptions = categories.filter((c) => (type === 'Despesa' ? c.grp === 'Investimento' || c.grp === 'Operacional' : c.grp === 'Receita'))
+  const catOptions = categories.filter((c) => c.grp === 'Investimento' || c.grp === 'Operacional')
   const visibleCategories = catOptions.filter((c) => c.name.toLocaleLowerCase().includes(catFilter.toLocaleLowerCase()))
   const stockId = stockPick ?? (preset?.purchase && preset.stockCode ? stock.find((s) => s.code === preset.stockCode)?.id ?? '' : '')
-  const stockItem = type === 'Despesa' ? stock.find((s) => s.id === stockId) : undefined
+  const stockItem = stock.find((s) => s.id === stockId)
   const cat = catPick ?? stockItem?.category ?? catOptions[0]?.name ?? ''
   const category = catOptions.find((c) => c.name === cat)
   const categoryStock = stock.filter((s) => s.category === cat)
-  const product = category?.item_type === 'Produto' || !!stockItem
+  // A category with a unit (or with items) holds stock: the expense must name the item it buys.
+  const stockCategory = !!category && (!!category.quantity_unit.trim() || categoryStock.length > 0)
+  const creating = stockCategory && stockId === NEW_ITEM
+  const product = category?.item_type === 'Produto' || !!stockItem || stockCategory
   const unit = stockItem?.unit ?? category?.quantity_unit ?? ''
   const baseline = stockItem?.unit_price ?? category?.baseline_price
   const priceText = pricePick?.category === cat && pricePick.stockId === stockId ? pricePick.text : baseline == null ? '' : String(baseline)
@@ -83,7 +88,7 @@ function FinForm({ preset, onClose }: { preset?: FinPreset; onClose: () => void 
     : String(i === selectedBatches.length - 1 ? Math.round((value - Math.round(value / selectedBatches.length * 100) / 100 * i) * 100) / 100 : Math.round(value / selectedBatches.length * 100) / 100))
 
   const balanceOf = (id: string) => balancesQ.data?.find((b) => b.id === id)?.balance ?? 0
-  const after = splits.reduce((a, s) => a + balanceOf(s.account_id), 0) + (type === 'Despesa' ? -value : value)
+  const after = splits.reduce((a, s) => a + balanceOf(s.account_id), 0) - value
   const afterLabel = splits.length > 1 ? `das ${splits.length} contas` : `de ${accounts.find((a) => a.id === splits[0]?.account_id)?.name ?? '—'}`
   const detailsSummary = [
     desc.trim() && 'Descrição preenchida',
@@ -97,13 +102,15 @@ function FinForm({ preset, onClose }: { preset?: FinPreset; onClose: () => void 
   }
 
   const kindFor = (): TxKind => {
-    if (type === 'Receita') return cat === 'Aporte' ? 'Aporte' : cat === 'Venda de animais' ? 'Venda' : 'Receita'
     return cat === 'Infra-estrutura' || cat === 'Animais' || preset?.type === 'Investimento' ? 'Investimento' : 'Pontual'
   }
 
   const save = async () => {
     if (!category) return setError('Escolha uma categoria válida da lista.')
     if (stockItem && stockItem.category !== cat) return setError('A categoria deve corresponder ao artigo de stock.')
+    if (stockCategory && !stockItem && !creating) return setError('Escolha o artigo de stock desta despesa, ou crie um novo.')
+    if (creating && !newName.trim()) return setError('Indique o nome do novo artigo de stock.')
+    if (creating && stock.some((s) => s.category === cat && s.name.trim().toLowerCase() === newName.trim().toLowerCase())) return setError('Já existe um artigo com esse nome nesta categoria.')
     if (product && !unit.trim()) return setError('Indique a unidade do produto.')
     if (product && !(Number.isFinite(quantity) && roundedQty > 0)) return setError('Indique uma quantidade válida.')
     if (product && !(Number.isFinite(unitPrice) && roundedPrice > 0)) return setError('Indique o preço por unidade.')
@@ -117,26 +124,33 @@ function FinForm({ preset, onClose }: { preset?: FinPreset; onClose: () => void 
       || Math.abs(shares.reduce((n, s) => n + s, 0) - (allocationMode === 'percent' ? 100 : value)) > 0.01))
       return detailError(allocationMode === 'percent' ? 'As percentagens dos lotes devem somar 100%.' : 'Os valores dos lotes devem somar o total do movimento.')
     const allocated = allocationMode === 'none' ? [] : selectedBatches.map((batch_id, i) => ({ batch_id,
-      amount: (type === 'Despesa' ? -1 : 1) * (allocationMode === 'percent'
+      amount: -(allocationMode === 'percent'
         ? i === selectedBatches.length - 1 ? Math.round((value - shares.slice(0, i).reduce((n, s) => n + Math.round(value * s) / 100, 0)) * 100) / 100 : Math.round(value * shares[i]) / 100
         : Math.round(shares[i] * 100) / 100),
     }))
-    if (allocated.length && (allocated.some((a) => (type === 'Despesa' ? -a.amount : a.amount) < 0)
-      || Math.abs(allocated.reduce((n, a) => n + a.amount, 0) - (type === 'Despesa' ? -value : value)) > 0.001))
+    if (allocated.length && (allocated.some((a) => a.amount > 0)
+      || Math.abs(allocated.reduce((n, a) => n + a.amount, 0) + value) > 0.001))
       return detailError('A distribuição por lote deve corresponder exactamente ao total.')
     const se = splitCheck(splits)
     if (se) return setError(se)
     setError('')
     try {
+      let stockItemId = stockItem?.id ?? null
+      if (creating) {
+        // Created empty: the expense below adds the purchased quantity to it.
+        const item = await newItem.insert.mutateAsync({ name: newName.trim(), category: cat, qty: 0, unit_price: roundedPrice })
+        stockItemId = item.id
+        setStockPick(item.id) // a retry after a failed save reuses it
+      }
       await create.mutateAsync({
         tx_date: date, title: desc.trim() || cat, kind: kindFor(), category: cat,
-        amount: type === 'Despesa' ? -value : value, quantity: product ? roundedQty : null,
+        amount: -value, quantity: product ? roundedQty : null,
         quantity_unit: product ? unit : null, unit_price: product ? roundedPrice : null,
         batch_ids: selectedBatches, batch_allocations: allocated,
-        stock_id: type === 'Despesa' ? stockItem?.id : null,
+        stock_id: stockItemId,
         splits: toSplits(splits), files,
       })
-      toast(`${type === 'Despesa' ? 'Despesa registada' : 'Receita registada'} · ${type === 'Despesa' ? '−' : '+'}${fmt(value)} MT · ${splits.length > 1 ? `${splits.length} contas` : accounts.find((a) => a.id === splits[0].account_id)?.name}`)
+      toast(`Despesa registada · −${fmt(value)} MT · ${splits.length > 1 ? `${splits.length} contas` : accounts.find((a) => a.id === splits[0].account_id)?.name}`)
       onClose()
     } catch (e) {
       setError(errorMessage(e))
@@ -147,34 +161,23 @@ function FinForm({ preset, onClose }: { preset?: FinPreset; onClose: () => void 
   const fetchError = accountsQ.error || categoriesQ.error || stockQ.error
 
   return (
-    <Sheet open onClose={onClose} title="Novo movimento" maxWidth={560}
+    <Sheet open onClose={onClose} title="Nova despesa" maxWidth={560}
       footer={<div className="flex min-w-0 flex-1 flex-col gap-3">
         <div className="flex flex-col gap-1 rounded-xl bg-hover px-3 py-2.5">
           <div className="flex min-w-0 items-baseline justify-between gap-3">
-            <span className="shrink-0 text-xs text-muted">Total do movimento</span>
-            <span className={cx('tabular whitespace-nowrap text-base font-semibold', type === 'Receita' ? 'text-success-strong' : 'text-ink')}>
-              {type === 'Despesa' ? '−' : '+'}{fmt(value)} MT
-            </span>
+            <span className="shrink-0 text-xs text-muted">Total da despesa</span>
+            <span className="tabular whitespace-nowrap text-base font-semibold text-ink">−{fmt(value)} MT</span>
           </div>
           <div className="flex min-w-0 items-baseline justify-between gap-3">
             <span className="min-w-0 truncate text-xs text-muted" title={`Saldo ${afterLabel} após`}>Saldo {afterLabel} após</span>
             <span className="tabular shrink-0 whitespace-nowrap text-sm font-semibold text-ink">{after < 0 ? '−' : ''}{fmt(after)} MT</span>
           </div>
         </div>
-        <Button variant="primary" size="lg" className="w-full" loading={create.isPending} disabled={loading || !!fetchError} onClick={save}>{type === 'Despesa' ? 'Registar despesa' : 'Registar receita'}</Button>
+        <Button variant="primary" size="lg" className="w-full" loading={create.isPending || newItem.insert.isPending} disabled={loading || !!fetchError} onClick={save}>Registar despesa</Button>
       </div>}>
       <div className="flex flex-col gap-3.5">
         {fetchError && <FormError>{errorMessage(fetchError)}</FormError>}
         <FormError>{error}</FormError>
-        <div className="flex rounded-[14px] bg-hover p-1" role="group" aria-label="Tipo de movimento">
-          {(['Despesa', 'Receita'] as const).map((t) => (
-            <button key={t} type="button" aria-pressed={type === t} onClick={() => { setType(t); setCatPick(null); setStockPick(''); setCatOpen(false) }}
-              className={cx('h-10 flex-1 rounded-[10px] border-0 font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-accent', type === t ? 'bg-white text-ink shadow-[0_1px_2px_rgba(0,0,0,0.08)]' : 'bg-transparent text-muted hover:text-ink')}>
-              {t}
-            </button>
-          ))}
-        </div>
-
         {!product && <Field label="Valor (MT)">
           <Input type="number" min="0" step="any" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" autoFocus
             className="tabular h-14 rounded-[14px] px-4 text-[22px] font-semibold" />
@@ -210,11 +213,15 @@ function FinForm({ preset, onClose }: { preset?: FinPreset; onClose: () => void 
           </div>
         </div>
 
-        {type === 'Despesa' && categoryStock.length > 0 && <Field label="Artigo de stock (opcional)">
-          <Select value={stockItem?.id ?? ''} onChange={(e) => setStockPick(e.target.value)}>
-            <option value="">Não adicionar ao stock</option>
-            {categoryStock.map((s) => <option key={s.id} value={s.id}>{s.name} · {s.code}</option>)}
+        {stockCategory && <Field label="Artigo de stock" hint="A quantidade comprada entra no stock deste artigo.">
+          <Select value={creating ? NEW_ITEM : stockItem?.id ?? ''} onChange={(e) => { setStockPick(e.target.value); setError('') }}>
+            <option value="" disabled>Escolha o artigo</option>
+            {categoryStock.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            <option value={NEW_ITEM}>+ Criar novo artigo</option>
           </Select>
+        </Field>}
+        {creating && <Field label="Nome do novo artigo" hint={`Fica em ${cat}${unit ? `, medido em ${unit}` : ''}. Pode completar os limites e a validade depois, em Stock.`}>
+          <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Ex.: Ração de crescimento" autoFocus />
         </Field>}
 
         {product && <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -223,7 +230,7 @@ function FinForm({ preset, onClose }: { preset?: FinPreset; onClose: () => void 
         </div>}
 
         <div className="flex flex-col gap-1.5">
-          <span className="text-[13px] font-semibold text-ink-2">{type === 'Despesa' ? 'Conta de pagamento' : 'Conta de recebimento'}</span>
+          <span className="text-[13px] font-semibold text-ink-2">Conta de pagamento</span>
           <SplitEditor value={splits} onChange={setSplitPick} accounts={accounts} amount={value} />
         </div>
 

@@ -16,7 +16,7 @@ export const queryClient = new QueryClient({
 
 const persister = createAsyncStoragePersister({
   storage: { getItem: get<string>, setItem: set, removeItem: del },
-  key: 'porkflow.cache',
+  key: 'suino-gestor.cache',
   throttleTime: 2000,
 })
 
@@ -27,7 +27,7 @@ export const persistOptions: Omit<PersistQueryClientOptions, 'queryClient'> = {
   persister,
   maxAge: MAX_AGE,
   // Bump when the shape of cached rows changes so old caches are discarded.
-  buster: 'v1',
+  buster: 'v2',
   dehydrateOptions: {
     shouldDehydrateQuery: (q) => q.state.status === 'success' && !NOT_PERSISTED.has(String(q.queryKey[0])),
   },

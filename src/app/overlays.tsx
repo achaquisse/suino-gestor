@@ -15,7 +15,7 @@ export type LogContext = {
 }
 
 export type FinPreset = {
-  type?: 'Despesa' | 'Receita' | 'Aporte' | 'Investimento'
+  type?: 'Despesa' | 'Investimento'
   category?: string
   purchase?: boolean
   stockCode?: string

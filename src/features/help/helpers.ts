@@ -9,7 +9,7 @@ export const HELP_CATS = Object.keys(HCAT) as HelpCategory[]
 export const docHref = (d: Pick<HelpDoc, 'id' | 'kind'>) => (d.kind === 'guide' ? `/help/playbooks/${d.id}` : `/help/articles/${d.id}`)
 export const docKind = (d: Pick<HelpDoc, 'kind'>) => (d.kind === 'guide' ? 'Guia prático' : 'Artigo')
 export const docLook = (d: Pick<HelpDoc, 'cat' | 'icon'>) => {
-  const [icon, tint, ink] = HCAT[d.cat] ?? HCAT['Usar o Porkflow']
+  const [icon, tint, ink] = HCAT[d.cat] ?? HCAT['Usar o Suino Gestor']
   return { icon: d.icon || icon, tint, ink }
 }
 

@@ -5,17 +5,17 @@ import { PERIODS, periodRange, rangeLabel, type Period } from './model'
 
 const menuCls = 'absolute top-[calc(100%+6px)] z-40 flex animate-pf-pop flex-col gap-0.5 rounded-[18px] border border-line bg-white p-1.5 shadow-pop'
 
-export function Toolbar({ period, from, to, onPeriod, onCustom, acct, onAcct, accounts, filtered, onClear, onCsv, onPrint, rangeText }: {
-  period: Period; from: string; to: string; onPeriod: (p: Exclude<Period, 'custom'>) => void; onCustom: (f: string, t: string) => void
+export function Toolbar({ start, period, from, to, onPeriod, onCustom, acct, onAcct, accounts, filtered, onClear, onCsv, onStockCsv, onPrint, rangeText }: {
+  start: string | null; period: Period; from: string; to: string; onPeriod: (p: Exclude<Period, 'custom'>) => void; onCustom: (f: string, t: string) => void
   acct: string; onAcct: (v: string) => void; accounts: Account[]; filtered: boolean; onClear: () => void
-  onCsv: () => void; onPrint: () => void; rangeText: string
+  onCsv: () => void; onStockCsv?: () => void; onPrint: () => void; rangeText: string
 }) {
   const { open: pOpen, setOpen: setPOpen, ref: pRef } = usePopover()
   const { open: eOpen, setOpen: setEOpen, ref: eRef } = usePopover()
   const [dFrom, setDFrom] = useState(from)
   const [dTo, setDTo] = useState(to)
   const err = !dFrom || !dTo || dFrom > dTo
-  const label = period === 'custom' ? 'Intervalo' : (PERIODS.find((p) => p[0] === period) ?? PERIODS[1])[1]
+  const label = period === 'custom' ? 'Intervalo' : (PERIODS.find((p) => p[0] === period) ?? PERIODS[0])[1]
 
   return (
     <div className="flex flex-wrap items-center gap-2 print:hidden">
@@ -26,7 +26,7 @@ export function Toolbar({ period, from, to, onPeriod, onCustom, acct, onAcct, ac
         {pOpen && (
           <div className={cx(menuCls, 'left-0 w-[min(320px,calc(100vw-32px))]')}>
             {PERIODS.map(([v, l]) => {
-              const [f, t] = periodRange(v)
+              const [f, t] = periodRange(v, start)
               const on = period === v
               return (
                 <button key={v} type="button" onClick={() => { onPeriod(v); setPOpen(false) }}
@@ -64,7 +64,11 @@ export function Toolbar({ period, from, to, onPeriod, onCustom, acct, onAcct, ac
         {eOpen && (
           <div className={cx(menuCls, 'right-0 w-[min(290px,calc(100vw-32px))]')}>
             <div className="px-2.5 py-2 text-xs text-muted">Período: {rangeText}</div>
-            {([['PDF', 'Relatório formatado para partilhar', 'picture_as_pdf', '#FDECEA', '#C0302A', onPrint], ['Excel', 'Folha com todos os dados', 'table_view', '#E6F6EE', '#15A05A', onCsv]] as const).map(([l, sub, icon, bg, fg, fn]) => (
+            {([
+              ['PDF', 'Relatório formatado para partilhar', 'picture_as_pdf', '#FDECEA', '#C0302A', onPrint],
+              ['Excel', 'Folha com todos os movimentos', 'table_view', '#E6F6EE', '#15A05A', onCsv],
+              ...(onStockCsv ? [['Stock (Excel)', 'Compras e consumo por artigo', 'inventory_2', '#EEECFE', '#4B3CD6', onStockCsv]] as const : []),
+            ] as const).map(([l, sub, icon, bg, fg, fn]) => (
               <button key={l} type="button" onClick={() => { setEOpen(false); fn() }}
                 className="flex min-h-[52px] items-center gap-3 rounded-xl border-0 bg-transparent px-2.5 text-left text-ink hover:bg-[#F3F3F9]">
                 <span className="grid size-[34px] shrink-0 place-items-center rounded-[10px]" style={{ background: bg, color: fg }}><Icon name={icon} size={18} /></span>

@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useFarm } from '@/app/farm'
 import { supabase } from '@/lib/supabase'
 import { useInvalidateFarm, useRpc } from '@/lib/queries'
-import type { Farm, MemberPrefs, Role } from '@/lib/database.types'
+import type { MemberPrefs, Role } from '@/lib/database.types'
 
 export function useUpdateMyMembership() {
   const rpc = useRpc('update_my_membership')
@@ -16,18 +16,6 @@ export function useUpdateMyMembership() {
       await qc.invalidateQueries({ queryKey: ['memberships'] })
     },
   }
-}
-
-export function useUpdateFarm() {
-  const { farmId } = useFarm()
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (patch: Partial<Pick<Farm, 'name' | 'currency' | 'units'>>) => {
-      const { error } = await supabase.from('farms').update(patch).eq('id', farmId)
-      if (error) throw error
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['memberships'] }),
-  })
 }
 
 export function useMemberAdmin() {

@@ -1,4 +1,4 @@
--- Porkflow RPCs: farm lifecycle + atomic farm operations.
+-- Suino Gestor RPCs: farm lifecycle + atomic farm operations.
 
 create or replace function public.pt_short(d date)
 returns text

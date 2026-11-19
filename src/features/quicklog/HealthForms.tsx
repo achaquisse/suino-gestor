@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { useRpc, useStock, useSymptoms, useTreatmentProducts } from '@/lib/queries'
 import { dShort, addDays, dec, numP, plural } from '@/lib/format'
 import { Button, Field, Icon, Input, Segmented, Select, Textarea, Toggle, cx } from '@/ui'
+import { qf, qtyLabel } from '@/features/stock/model'
 import {
   AnimalSelect, CommonFields, FormSheet, LockedAnimal, firstId, scoped, useBase, useCommon, useSubmit, type FormProps,
 } from './shared'
@@ -92,7 +93,7 @@ export function TreatmentForm({ ctx, onBack, onClose }: FormProps) {
           {stockItem && (
             <div className="flex min-w-0 flex-col gap-0.5 bg-[#F7F7FB] px-3 py-2.5">
               <span className="text-xs text-muted">Stock</span>
-              <span className="tabular text-sm font-semibold">{stockItem.qty} → {Math.max(0, stockItem.qty - 1)} {stockItem.unit}</span>
+              <span className="tabular text-sm font-semibold">{qf(stockItem.qty)} → {qtyLabel(Math.max(0, stockItem.qty - 1), stockItem)}</span>
             </div>
           )}
         </div>

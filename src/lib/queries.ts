@@ -86,6 +86,21 @@ export const useNotificationResolutions = () => {
 }
 export const useStock = () =>
   useFarmQuery(['stock'], async (f) => num(await selectAll('stock_items', f, { column: 'name' }), ['qty', 'max_qty', 'low_qty', 'unit_price']))
+export const useStockMovements = (itemId?: string) =>
+  useFarmQuery(['stock_movements', itemId ?? 'all'], async (f) => {
+    let q = supabase.from('stock_movements').select('*').eq('farm_id', f)
+    if (itemId) q = q.eq('item_id', itemId)
+    const { data, error } = await q.order('moved_on', { ascending: false }).order('created_at', { ascending: false }).limit(itemId ? 500 : 1000)
+    if (error) throw error
+    return num(data ?? [], ['delta', 'qty_after'])
+  })
+export const useStockMovementsBetween = (from: string, to: string) =>
+  useFarmQuery(['stock_movements', 'range', from, to], async (f) => {
+    const { data, error } = await supabase.from('stock_movements').select('*').eq('farm_id', f)
+      .gte('moved_on', from).lte('moved_on', to).order('moved_on')
+    if (error) throw error
+    return num(data ?? [], ['delta', 'qty_after'])
+  })
 export const useTreatmentProducts = () =>
   useFarmQuery(['treatment_products'], async (f) => num(await selectAll('treatment_products', f, { column: 'created_at' }), ['dose_ml', 'per_kg']))
 export const useBreeds = () => useFarmQuery(['breeds'], (f) => selectAll('breeds', f, { column: 'name' }))

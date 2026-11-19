@@ -50,7 +50,7 @@ export function Waterfall({ s }: { s: Statement }) {
               <div className="relative w-full flex-1">
                 <div className="absolute right-[15%] left-[15%] rounded-md transition-[height,bottom] duration-700 ease-pf" style={{ bottom: w.b, height: w.h, background: w.bg }} />
               </div>
-              <span className="tabular text-xs font-semibold" style={{ color: w.vc }}>{w.val}</span>
+              <span className="tabular whitespace-nowrap text-[11px] font-semibold sm:text-xs" style={{ color: w.vc }}>{w.val}</span>
               <span className="min-h-7 text-center text-[11px] text-muted">{w.l}</span>
             </div>
         ))}

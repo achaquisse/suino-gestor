@@ -12,10 +12,10 @@ function pwaPlugin(): Plugin {
     readdirSync(new URL(dir, import.meta.url), { withFileTypes: true }).flatMap((d) =>
       d.isDirectory() ? publicFiles(`${dir}${d.name}/`, `${base}${d.name}/`) : [`/${base}${d.name}`])
   return {
-    name: 'porkflow-pwa',
+    name: 'suino-gestor-pwa',
     apply: 'build',
     generateBundle(_, bundle) {
-      const files = ['/index.html', ...Object.keys(bundle).map((f) => `/${f}`), ...publicFiles('./public/')]
+      const files = ['/index.html', ...Object.keys(bundle).map((f) => `/${f}`), ...publicFiles('./public/').filter((f) => !f.startsWith('/screenshots/') && f !== '/config.js')]
       const version = createHash('sha256').update(files.join('\n')).digest('hex').slice(0, 12)
       const source = readFileSync(new URL('./src/pwa/sw.js', import.meta.url), 'utf8')
         .replace("const VERSION = '__VERSION__'", `const VERSION = ${JSON.stringify(version)}`)
@@ -29,5 +29,18 @@ export default defineConfig({
   plugins: [react(), babel({ presets: [reactCompilerPreset()] }), tailwindcss(), pwaPlugin()],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+  },
+  build: {
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler|react-router)[\\/]/, priority: 30 },
+            { name: 'supabase', test: /node_modules[\\/]@supabase[\\/]/, priority: 20 },
+            { name: 'vendor', test: /node_modules[\\/]/, priority: 10 },
+          ],
+        },
+      },
+    },
   },
 })

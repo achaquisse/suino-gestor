@@ -1,10 +1,30 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "react-hooks"],
-  "categories": { "correctness": "error" },
+  "plugins": [
+    "react",
+    "typescript",
+    "react-hooks"
+  ],
+  "categories": {
+    "correctness": "error"
+  },
   "rules": {
     "react-hooks/rules-of-hooks": "error",
     "react-hooks/exhaustive-deps": "warn"
   },
-  "ignorePatterns": ["mockup/**", "dist/**", "scripts/**"]
+  "ignorePatterns": [
+    "mockup/**",
+    "dist/**",
+    "scripts/**"
+  ],
+  "overrides": [
+    {
+      "files": [
+        "e2e/**"
+      ],
+      "rules": {
+        "react-hooks/rules-of-hooks": "off"
+      }
+    }
+  ]
 }

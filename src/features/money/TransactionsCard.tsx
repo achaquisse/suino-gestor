@@ -1,4 +1,4 @@
-import { Icon, Pager, Segmented, SearchInput, Select, Card, cx, type usePaged } from '@/ui'
+import { Icon, Pager, SearchInput, Select, Card, cx, type usePaged } from '@/ui'
 import type { Transaction } from '@/lib/database.types'
 import { dShort, sgn } from '@/lib/format'
 import { pctIn, type Filters, type Lookups } from './model'
@@ -14,12 +14,11 @@ export default function TransactionsCard({ rows, pager, total, categories, filte
       <div className="flex flex-col gap-3 px-5 py-4">
         <div className="flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex items-baseline gap-2.5">
-            <h2 className="m-0 text-[15px] font-semibold">Movimentos</h2>
-            <span className="text-[13px] text-muted">{total} {total === 1 ? 'movimento' : 'movimentos'}</span>
+            <h2 className="m-0 text-[15px] font-semibold">Despesas</h2>
+            <span className="text-[13px] text-muted">{total} {total === 1 ? 'despesa' : 'despesas'}</span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <SearchInput value={filters.q} onChange={(q) => onFilters({ q })} placeholder="Pesquisar movimentos" className="w-60 max-w-full" />
-            <Segmented options={[['all', 'Todos'], ['in', 'Entradas'], ['out', 'Saídas']] as const} value={filters.type} onChange={(type) => onFilters({ type })} />
+            <SearchInput value={filters.q} onChange={(q) => onFilters({ q })} placeholder="Pesquisar despesas" className="w-60 max-w-full" />
             <Select value={filters.sort} onChange={(e) => onFilters({ sort: e.target.value as Filters['sort'] })} className="h-11 w-auto! rounded-xl">
               <option value="new">Mais recentes</option>
               <option value="old">Mais antigos</option>
@@ -41,7 +40,7 @@ export default function TransactionsCard({ rows, pager, total, categories, filte
           })}
         </div>
       </div>
-      {!rows.length && <div className="border-t border-divider px-5 py-8 text-center text-muted">Nenhum movimento encontrado.</div>}
+      {!rows.length && <div className="border-t border-divider px-5 py-8 text-center text-muted">Nenhuma despesa encontrada.</div>}
       {rows.map((t, i) => {
         const pct = pctIn(t, groups)
         return (

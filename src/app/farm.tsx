@@ -6,7 +6,8 @@ import { ROLE_LABEL } from '@/lib/constants'
 import { initials } from '@/lib/format'
 import { useAuth } from './auth'
 
-export type Membership = FarmMember & { farm: Farm }
+/** `via_admin`: a farm the super admin opened from /admin without being a member of it. */
+export type Membership = FarmMember & { farm: Farm; via_admin?: boolean }
 
 type FarmState = {
   farm: Farm
@@ -19,11 +20,29 @@ type FarmState = {
   canSeeMoney: boolean
   canEditHerd: boolean
   isOwner: boolean
+  /** Platform super admin (SUPER_ADMIN_EMAIL): creates farms and can open any of them. */
+  isSuperAdmin: boolean
+  /** The current farm was opened through the admin area, not through a membership. */
+  viaAdmin: boolean
   switchFarm: (id: string) => void
 }
 
 const FarmContext = createContext<FarmState | null>(null)
-const STORAGE_KEY = 'porkflow.farm'
+export const FARM_STORAGE_KEY = 'suino-gestor.farm'
+const STORAGE_KEY = FARM_STORAGE_KEY
+
+export function useIsSuperAdmin() {
+  const { user } = useAuth()
+  return useQuery({
+    queryKey: ['super-admin', user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('is_super_admin')
+      if (error) throw error
+      return data === true
+    },
+  })
+}
 
 export function useMemberships() {
   const { user } = useAuth()
@@ -38,13 +57,29 @@ export function useMemberships() {
         .eq('user_id', user!.id)
         .order('created_at')
       if (error) throw error
-      return (data ?? []) as unknown as Membership[]
+      const list = (data ?? []) as unknown as Membership[]
+      // The super admin can open any farm: add the selected one when they are not a member.
+      const selected = localStorage.getItem(STORAGE_KEY)
+      if (selected && !list.some((m) => m.farm_id === selected)) {
+        const { data: isAdmin } = await supabase.rpc('is_super_admin')
+        if (isAdmin) {
+          const { data: farm } = await supabase.from('farms').select('*').eq('id', selected).maybeSingle()
+          if (farm) {
+            list.push({
+              farm_id: farm.id, user_id: user!.id, role: 'owner', display_name: '', created_at: farm.created_at,
+              prefs: { lang: 'pt', notif: { tasks: true, stock: true } }, farm, via_admin: true,
+            })
+          }
+        }
+      }
+      return list
     },
   })
 }
 
 export function FarmProvider({ memberships, children }: { memberships: Membership[]; children: ReactNode }) {
   const { user } = useAuth()
+  const isSuperAdmin = useIsSuperAdmin().data ?? false
   const qc = useQueryClient()
   const [farmId, setFarmId] = useState(() => localStorage.getItem(STORAGE_KEY) ?? '')
   const member = memberships.find((m) => m.farm_id === farmId) ?? memberships[0]
@@ -61,19 +96,21 @@ export function FarmProvider({ memberships, children }: { memberships: Membershi
       farm: member.farm,
       farmId: member.farm_id,
       role,
-      roleLabel: ROLE_LABEL[role],
+      roleLabel: member.via_admin ? 'Super admin' : ROLE_LABEL[role],
       member,
       memberships,
       user: { id: user!.id, name, email: user?.email ?? '', initials: initials(name), avatar: meta.avatar_url ?? null },
       canSeeMoney: role === 'owner' || role === 'investor',
       canEditHerd: role !== 'investor',
       isOwner: role === 'owner',
+      isSuperAdmin,
+      viaAdmin: !!member.via_admin,
       switchFarm: (id) => {
         setFarmId(id)
         qc.removeQueries({ queryKey: ['farm'] })
       },
     }
-  }, [member, memberships, user, qc])
+  }, [member, memberships, user, qc, isSuperAdmin])
   return <FarmContext value={value}>{children}</FarmContext>
 }
 

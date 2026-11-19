@@ -29,9 +29,9 @@ export type Database = {
         Relationships: []
       }
       categories: {
-        Row: { id: string; farm_id: string; name: string; grp: string; color: string; description: string; active: boolean; created_at: string; item_type: string; quantity_unit: string; baseline_price: number | null }
-        Insert: { id?: string; farm_id: string; name: string; grp: string; color?: string; description?: string; active?: boolean; created_at?: string; item_type?: string; quantity_unit?: string; baseline_price?: number | null }
-        Update: { id?: string; farm_id?: string; name?: string; grp?: string; color?: string; description?: string; active?: boolean; created_at?: string; item_type?: string; quantity_unit?: string; baseline_price?: number | null }
+        Row: { id: string; farm_id: string; name: string; grp: string; color: string; description: string; active: boolean; created_at: string; item_type: string; quantity_unit: string; baseline_price: number | null; quantity_unit_singular: string }
+        Insert: { id?: string; farm_id: string; name: string; grp: string; color?: string; description?: string; active?: boolean; created_at?: string; item_type?: string; quantity_unit?: string; baseline_price?: number | null; quantity_unit_singular?: string }
+        Update: { id?: string; farm_id?: string; name?: string; grp?: string; color?: string; description?: string; active?: boolean; created_at?: string; item_type?: string; quantity_unit?: string; baseline_price?: number | null; quantity_unit_singular?: string }
         Relationships: []
       }
       debts: {
@@ -70,6 +70,12 @@ export type Database = {
         Update: { id?: string; kind?: string; cat?: string; title?: string; blurb?: string; icon?: string; mins?: number; lead?: string; facts?: Json; sections?: Json; example?: Json | null; warn?: Json; cta_label?: string | null; cta_target?: string | null; hero_url?: string | null; hero_alt?: string; hero_credit?: string; hero_source?: string | null; sort?: number; published?: boolean; search_text?: string; updated_at?: string }
         Relationships: []
       }
+      notification_resolutions: {
+        Row: { farm_id: string; user_id: string; alert_key: string; resolved_at: string }
+        Insert: { farm_id: string; user_id: string; alert_key: string; resolved_at?: string }
+        Update: { farm_id?: string; user_id?: string; alert_key?: string; resolved_at?: string }
+        Relationships: []
+      }
       parameters: {
         Row: { id: string; farm_id: string; key: string; name: string; grp: string; value: number; unit: string; description: string; created_at: string }
         Insert: { id?: string; farm_id: string; key: string; name: string; grp: string; value: number; unit?: string; description?: string; created_at?: string }
@@ -95,9 +101,15 @@ export type Database = {
         Relationships: []
       }
       stock_items: {
-        Row: { id: string; farm_id: string; code: string; name: string; unit: string; qty: number; max_qty: number; low_qty: number; note: string; expires_on: string | null; category: string; unit_price: number | null; created_at: string; active: boolean }
-        Insert: { id?: string; farm_id: string; code: string; name: string; unit?: string; qty?: number; max_qty?: number; low_qty?: number; note?: string; expires_on?: string | null; category?: string; unit_price?: number | null; created_at?: string; active?: boolean }
-        Update: { id?: string; farm_id?: string; code?: string; name?: string; unit?: string; qty?: number; max_qty?: number; low_qty?: number; note?: string; expires_on?: string | null; category?: string; unit_price?: number | null; created_at?: string; active?: boolean }
+        Row: { id: string; farm_id: string; code: string; name: string; unit: string; qty: number; max_qty: number; low_qty: number; note: string; expires_on: string | null; category: string; unit_price: number | null; created_at: string; active: boolean; unit_singular: string; shelf_life_days: number | null }
+        Insert: { id?: string; farm_id: string; code: string; name: string; unit?: string; qty?: number; max_qty?: number; low_qty?: number; note?: string; expires_on?: string | null; category?: string; unit_price?: number | null; created_at?: string; active?: boolean; unit_singular?: string; shelf_life_days?: number | null }
+        Update: { id?: string; farm_id?: string; code?: string; name?: string; unit?: string; qty?: number; max_qty?: number; low_qty?: number; note?: string; expires_on?: string | null; category?: string; unit_price?: number | null; created_at?: string; active?: boolean; unit_singular?: string; shelf_life_days?: number | null }
+        Relationships: []
+      }
+      stock_movements: {
+        Row: { id: string; farm_id: string; item_id: string; moved_on: string; reason: string; delta: number; qty_after: number; note: string; created_by: string | null; created_by_name: string; created_at: string }
+        Insert: { id?: string; farm_id: string; item_id: string; moved_on?: string; reason: string; delta: number; qty_after: number; note?: string; created_by?: string | null; created_by_name?: string; created_at?: string }
+        Update: { id?: string; farm_id?: string; item_id?: string; moved_on?: string; reason?: string; delta?: number; qty_after?: number; note?: string; created_by?: string | null; created_by_name?: string; created_at?: string }
         Relationships: []
       }
       symptoms: {
@@ -149,12 +161,17 @@ export type Database = {
     }
     Functions: {
       accept_invites: { Args: Record<string, never>; Returns: number }
+      admin_create_farm: { Args: { p_name: string; p_owner_email?: string; p_demo?: boolean }; Returns: string }
+      admin_farms: { Args: Record<string, never>; Returns: Record<string, unknown>[] }
+      admin_users: { Args: Record<string, never>; Returns: Record<string, unknown>[] }
       buy_animals: { Args: { p_farm: string; p_qty: number; p_stage: string; p_sex: string; p_breed: string; p_kg: number; p_pen: string; p_born: string; p_supplier: string; p_price: number; p_account: string; p_date?: string; p_by?: string }; Returns: string[] }
+      count_stock: { Args: { p_farm: string; p_item: string; p_count: number; p_note?: string; p_date?: string; p_by?: string }; Returns: number }
       create_farm: { Args: { p_name: string; p_demo?: boolean }; Returns: string }
       fmt_mt: { Args: { v: number }; Returns: string }
       has_role: { Args: { p_farm: string; p_roles: string[] }; Returns: boolean }
       help_fold: { Args: { p_text: string }; Returns: string }
       is_member: { Args: { p_farm: string }; Returns: boolean }
+      is_super_admin: { Args: Record<string, never>; Returns: boolean }
       log_birth: { Args: { p_farm: string; p_sow: string; p_live: number; p_dead?: number; p_date?: string; p_by?: string }; Returns: number }
       log_death: { Args: { p_farm: string; p_animal: string; p_cause?: string; p_date?: string; p_by?: string }; Returns: undefined }
       log_illness: { Args: { p_farm: string; p_animal: string; p_symptoms: string[]; p_severity?: string; p_isolate?: boolean; p_notes?: string; p_date?: string; p_by?: string }; Returns: undefined }
@@ -164,14 +181,20 @@ export type Database = {
       log_transfer: { Args: { p_farm: string; p_animal: string; p_from: string; p_to: string; p_date?: string; p_by?: string }; Returns: number }
       log_treatment: { Args: { p_farm: string; p_animal_ids: string[]; p_product: string; p_product_name: string; p_withdrawal_days?: number; p_stock_code?: string; p_date?: string; p_by?: string }; Returns: number }
       log_weight: { Args: { p_farm: string; p_animal: string; p_kg: number; p_date?: string; p_by?: string }; Returns: undefined }
+      move_stock: { Args: { p_farm: string; p_item: string; p_kind: string; p_qty: number; p_reason: string; p_note?: string; p_date?: string; p_by?: string; p_price?: number; p_account?: string; p_supplier?: string }; Returns: number }
       my_name: { Args: { p_farm: string }; Returns: string }
       param: { Args: { p_farm: string; p_key: string; p_default: number }; Returns: number }
       pay_debt: { Args: { p_id: string; p_amount?: number; p_date?: string }; Returns: number }
       pay_recurring: { Args: { p_id: string; p_date?: string }; Returns: string }
       pt_short: { Args: { d: string }; Returns: string }
       require_role: { Args: { p_farm: string; p_roles: string[] }; Returns: undefined }
+      require_super_admin: { Args: Record<string, never>; Returns: undefined }
       search_help: { Args: { p_query?: string; p_cat?: string }; Returns: Json }
+      slugify: { Args: { p_text: string }; Returns: string }
       split_amounts: { Args: { p_splits: Json; p_default_account: string; p_amount: number }; Returns: Record<string, unknown>[] }
+      stock_context: { Args: { p_reason: string; p_note?: string; p_date?: string; p_by?: string }; Returns: undefined }
+      stock_reasons: { Args: { p_kind: string }; Returns: string[] }
+      unit_singular_of: { Args: { p_plural: string }; Returns: string }
       update_my_membership: { Args: { p_farm: string; p_prefs?: Json; p_display_name?: string }; Returns: undefined }
     }
     Enums: Record<string, never>

@@ -4,22 +4,17 @@ import { Icon } from '@/ui'
 import { cx } from '@/ui'
 import GeneralTab from './GeneralTab'
 import AccountsTab from './AccountsTab'
-import CategoriesTab from './CategoriesTab'
 import ParamsTab from './ParamsTab'
-import StockTab from './StockTab'
-import CatalogsTab from './CatalogsTab'
 
-type Tab = 'geral' | 'contas' | 'tipos' | 'stock' | 'catalogos' | 'params'
+type Tab = 'geral' | 'contas' | 'params'
 
 export default function SettingsPage() {
   const { canSeeMoney } = useFarm()
-  const [tab] = useUrlState<Tab>('tab', 'geral', ['geral', 'contas', 'tipos', 'stock', 'catalogos', 'params'])
+  const [tab] = useUrlState<Tab>('tab', 'geral', ['geral', 'contas', 'params'])
   const setTab = (t: Tab) => setUrlParams({ tab: t === 'geral' ? null : t, q: null, group: null, kind: null, page: null, per: null })
   const tabs: [Tab, string, string][] = [
     ['geral', 'Geral', 'tune'],
-    ...(canSeeMoney ? ([['contas', 'Contas', 'account_balance'], ['tipos', 'Tipos de custo', 'category']] as [Tab, string, string][]) : []),
-    ['stock', 'Artigos de stock', 'inventory_2'],
-    ['catalogos', 'Catálogos', 'vaccines'],
+    ...(canSeeMoney ? ([['contas', 'Contas', 'account_balance']] as [Tab, string, string][]) : []),
     ['params', 'Parâmetros', 'settings_suggest'],
   ]
   const active = tabs.some(([v]) => v === tab) ? tab : 'geral'
@@ -40,9 +35,6 @@ export default function SettingsPage() {
       </header>
       {active === 'geral' && <GeneralTab />}
       {active === 'contas' && <AccountsTab />}
-      {active === 'tipos' && <CategoriesTab />}
-      {active === 'stock' && <StockTab />}
-      {active === 'catalogos' && <CatalogsTab />}
       {active === 'params' && <ParamsTab />}
     </div>
   )

@@ -114,6 +114,13 @@
     background: var(--color-canvas);
     -webkit-font-smoothing: antialiased;
   }
+  html {
+    scroll-padding-top: calc(80px + env(safe-area-inset-top));
+    scroll-padding-bottom: calc(110px + env(safe-area-inset-bottom));
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
   body {
     font-family: var(--font-sans);
     color: var(--color-ink);
@@ -154,11 +161,81 @@
     var(--color-canvas);
 }
 
+@supports (-webkit-touch-callout: none) {
+  input:not([type='checkbox'], [type='radio'], [type='range']),
+  select,
+  textarea {
+    font-size: max(16px, 1em) !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Login page */
+.login-bg {
+  background:
+    radial-gradient(900px 520px at 50% -12%, #ece8ff 0, rgba(236, 232, 255, 0) 70%),
+    var(--color-canvas);
+}
+.login-grid {
+  background-image: radial-gradient(rgba(91, 76, 240, 0.12) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse 70% 55% at 50% 40%, #000 20%, transparent 75%);
+}
+.login-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(70px);
+  opacity: 0.55;
+  animation: loginDrift 18s ease-in-out infinite alternate;
+}
+.login-logo {
+  animation: loginBob 5s ease-in-out infinite;
+}
+.login-logo .pig-eyes {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: loginBlink 4.5s ease-in-out infinite;
+}
+.login-shine {
+  position: relative;
+  overflow: hidden;
+}
+.login-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgba(91, 76, 240, 0.08) 50%, transparent 65%);
+  transform: translateX(-100%);
+  transition: transform 0.7s var(--ease-pf);
+}
+.login-shine:hover:not(:disabled)::after {
+  transform: translateX(100%);
+}
+@keyframes loginDrift {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(40px, -30px) scale(1.08); }
+  100% { transform: translate(-30px, 25px) scale(0.95); }
+}
+@keyframes loginBob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-6px) rotate(-2deg); }
+}
+@keyframes loginBlink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-blob,
+  .login-logo,
+  .login-logo .pig-eyes {
+    animation: none !important;
   }
 }

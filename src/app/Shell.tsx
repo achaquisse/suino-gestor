@@ -1,11 +1,12 @@
 import { Suspense, useId, useLayoutEffect, useRef, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { NavLink, Outlet, useLocation, useMatch, useNavigate, useParams } from 'react-router'
-import { Avatar, Icon, Loading, cx, usePopover, useToast } from '@/ui'
+import { Avatar, Icon, Loading, Logo, cx, usePopover, useToast } from '@/ui'
 import { ROLE_LABEL } from '@/lib/constants'
 import { useAnimal, useInvalidateFarm, useNotificationResolutions } from '@/lib/queries'
 import { errorMessage, supabase } from '@/lib/supabase'
 import { useAlerts } from '@/features/today/useAlerts'
+import { InstallPrompt, useInstallAction } from '@/pwa/InstallPrompt'
 import { useAuth } from './auth'
 import { useFarm } from './farm'
 import { useOverlays } from './overlays'
@@ -16,7 +17,8 @@ function useNavDefs(): NavDef[] {
   const { canSeeMoney } = useFarm()
   const all: (NavDef & { money?: boolean })[] = [
     { to: '/herd', label: 'Animais', icon: 'fence' },
-    { to: '/money', label: 'Finanças', icon: 'savings', money: true },
+    { to: '/stock', label: 'Stock', icon: 'inventory_2' },
+    { to: '/money', label: 'Despesas', icon: 'receipt_long', money: true },
     { to: '/reports', label: 'Relatórios', icon: 'monitoring', money: true },
     { to: '/help', label: 'Ajuda', icon: 'help' },
   ]
@@ -50,11 +52,12 @@ function useQuickContext() {
 }
 
 function UserMenu({ compact }: { compact?: boolean }) {
-  const { farm, memberships, switchFarm, user } = useFarm()
+  const { farm, memberships, switchFarm, user, isSuperAdmin } = useFarm()
   const { signOut } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
   const { open, setOpen, ref: popRef } = usePopover()
+  const install = useInstallAction()
   const toggle = () => setOpen((o) => !o)
   const item = 'flex items-center gap-2.5 rounded-[10px] border-0 bg-transparent px-3 py-2.5 text-left text-sm font-medium'
   return (
@@ -94,13 +97,23 @@ function UserMenu({ compact }: { compact?: boolean }) {
               }}
               className={cx('flex items-center justify-between gap-2 rounded-[10px] border-0 px-3 py-2.5 text-left hover:bg-hover', m.farm_id === farm.id ? 'bg-hover' : 'bg-transparent')}>
               <span className="truncate text-sm font-medium">{m.farm.name}</span>
-              <span className="shrink-0 text-xs text-muted">{ROLE_LABEL[m.role]}</span>
+              <span className="shrink-0 text-xs text-muted">{m.via_admin ? 'Super admin' : ROLE_LABEL[m.role]}</span>
             </button>
           ))}
           <div className="mx-1.5 my-1 h-px bg-divider" />
+          {isSuperAdmin && (
+            <button type="button" onClick={() => { setOpen(false); navigate('/admin') }} className={cx(item, 'hover:bg-hover')}>
+              <Icon name="admin_panel_settings" className="text-muted" />Administração
+            </button>
+          )}
           <button type="button" onClick={() => { setOpen(false); navigate('/settings') }} className={cx(item, 'hover:bg-hover')}>
             <Icon name="settings" className="text-muted" />Definições
           </button>
+          {install.available && (
+            <button type="button" onClick={() => { setOpen(false); install.start() }} className={cx(item, 'hover:bg-hover')}>
+              <Icon name="install_mobile" className="text-muted" />Instalar app
+            </button>
+          )}
           <button type="button"
             onClick={async () => {
               setOpen(false)
@@ -151,7 +164,7 @@ function NotificationMenu({ compact }: { compact?: boolean }) {
             <h2 className="m-0 text-[15px] font-semibold">Notificações</h2>
             <span className="tabular text-xs text-muted">{visible.length} por tratar</span>
           </div>
-          <div className="max-h-[min(480px,65vh)] overflow-y-auto">
+          <div className="max-h-[min(480px,calc(100dvh-240px))] overflow-y-auto overscroll-contain wide:max-h-[min(480px,65dvh)]">
             {resolutions.isPending && <div className="p-5"><Loading /></div>}
             {resolutions.isError && <div className="p-4 text-sm text-danger">Não foi possível carregar as notificações. <button type="button" onClick={() => resolutions.refetch()} className="border-0 bg-transparent font-semibold text-accent-strong">Tentar novamente</button></div>}
             {resolutions.isSuccess && visible.length === 0 && <div className="px-4 py-6 text-center text-sm text-muted">Sem notificações por tratar.</div>}
@@ -178,7 +191,8 @@ function NotificationMenu({ compact }: { compact?: boolean }) {
 export function Shell() {
   const navDefs = useNavDefs()
   const location = useLocation()
-  const { farm, memberships, switchFarm } = useFarm()
+  const { farm, memberships, switchFarm, viaAdmin } = useFarm()
+  const navigate = useNavigate()
   const { openLog } = useOverlays()
   const quickCtx = useQuickContext()
   const toast = useToast()
@@ -195,12 +209,12 @@ export function Shell() {
   const openQuick = () => openLog('menu', quickCtx)
 
   return (
-    <div className="app-bg flex min-h-screen justify-center">
-      <div className="relative flex min-h-screen w-full flex-col">
+    <div className="app-bg flex min-h-dvh justify-center">
+      <div className="relative flex min-h-dvh w-full flex-col">
         {/* Wide header */}
         <div className="sticky top-0 z-30 mx-auto hidden w-full max-w-[1120px] px-10 pt-4 wide:block">
           <header className="glass flex items-center gap-1 rounded-[22px] border border-white/95 p-2 shadow-[inset_0_1px_0_#fff,0_1px_2px_rgba(16,24,40,0.05),0_14px_40px_rgba(91,76,245,0.14)]">
-            <div className="mr-2 grid h-[42px] w-[42px] shrink-0 place-items-center rounded-[13px] bg-brand text-base font-bold text-white shadow-[0_4px_12px_rgba(91,76,240,0.3)]">P</div>
+            <Logo size={42} className="mr-2 shrink-0 rounded-[13px] shadow-[0_4px_12px_rgba(91,76,240,0.3)]" />
             <nav ref={topRef} className="relative flex min-w-0 flex-1 gap-0.5" aria-label="Principal">
               <div className="absolute -bottom-0.5 h-[3px] rounded-t-[3px] bg-accent transition-[left,width,opacity] duration-[450ms] ease-spring"
                 style={{ left: (topPos?.l ?? 0) + 12, width: Math.max(0, (topPos?.w ?? 0) - 24), opacity: topPos ? 1 : 0 }} />
@@ -222,8 +236,8 @@ export function Shell() {
         </div>
 
         {/* Narrow top bar */}
-        <div className="glass sticky top-0 z-20 flex items-center gap-2.5 border-b border-white/90 px-4 py-3 wide:hidden">
-          <div className="grid h-7 w-7 place-items-center rounded-lg bg-brand text-sm font-bold text-white shadow-[0_4px_14px_rgba(91,76,240,0.26)]">P</div>
+        <div className="glass sticky top-0 z-30 flex items-center gap-2.5 border-b border-white/90 pr-[max(16px,env(safe-area-inset-right))] pl-[max(16px,env(safe-area-inset-left))] pt-[max(12px,env(safe-area-inset-top))] pb-3 wide:hidden">
+          <Logo size={28} className="rounded-lg shadow-[0_4px_14px_rgba(91,76,240,0.26)]" />
           <button type="button" onClick={cycleFarm} className="flex min-w-0 flex-1 items-center gap-1 border-0 bg-transparent p-0 text-left">
             <span className="truncate text-sm font-semibold">{farm.name}</span>
             {memberships.length > 1 && <Icon name="expand_more" size={16} className="text-muted" />}
@@ -231,6 +245,14 @@ export function Shell() {
           <NotificationMenu compact />
           <UserMenu compact />
         </div>
+
+        {viaAdmin && (
+          <div role="note" className="mx-auto mt-3 flex w-[calc(100%-32px)] max-w-[1040px] items-center gap-2.5 rounded-[14px] border border-[#F3DDBF] bg-[#FDF1E2] px-3.5 py-2.5 text-sm text-[#7A4712]">
+            <Icon name="admin_panel_settings" size={19} className="shrink-0" />
+            <span className="min-w-0 flex-1">Modo administrador: está a ver <strong>{farm.name}</strong> sem ser membro. As alterações ficam registadas em seu nome.</span>
+            <button type="button" onClick={() => navigate('/admin')} className="shrink-0 border-0 bg-transparent p-0 font-semibold text-[#7A4712] hover:underline">Voltar à administração</button>
+          </div>
+        )}
 
         <main className="mx-auto w-full max-w-[1120px] flex-1 px-4 pt-5 pb-[120px] wide:px-10 wide:pt-7 wide:pb-14">
           <Suspense fallback={<Loading />}>
@@ -257,6 +279,7 @@ export function Shell() {
             </NavLink>
           ))}
         </nav>
+        <InstallPrompt />
       </div>
     </div>
   )

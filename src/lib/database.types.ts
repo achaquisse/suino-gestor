@@ -7,7 +7,7 @@ export type Tone = 'neutral' | 'accent' | 'red' | 'amber'
 export type EventKind = 'task' | 'health' | 'breeding' | 'money'
 export type AccountKind = 'Operacional' | 'Investimento' | 'Caixa'
 export type CategoryGroup = 'Investimento' | 'Operacional' | 'Receita' | 'Dívida'
-export type TxKind = 'Venda' | 'Aporte' | 'Investimento' | 'Recorrente' | 'Pontual' | 'Receita' | 'Dívida'
+export type TxKind = 'Venda' | 'Injeção de capital' | 'Investimento' | 'Recorrente' | 'Pontual' | 'Receita' | 'Dívida'
 export type Frequency = 'Semanal' | 'Mensal' | 'Trimestral' | 'Anual'
 export type ParamGroup = 'Reprodução' | 'Crescimento' | 'Vendas' | 'Stock' | 'Saúde' | 'Finanças'
 export type Split = { account_id: string; pct: number }
@@ -15,6 +15,14 @@ export type MemberPrefs = { lang?: string; notif?: { tasks?: boolean; stock?: bo
 
 export type Profile = { id: string; full_name: string; email: string; avatar_url: string | null; created_at: string }
 export type Farm = { id: string; name: string; currency: string; units: string; created_by: string | null; created_at: string }
+export type AdminFarm = {
+  id: string; name: string; created_at: string; created_by_name: string
+  owners: string; members: number; pending_invites: number; pens: number; animals: number
+}
+export type AdminUser = {
+  id: string; name: string; email: string; created_at: string; last_sign_in_at: string | null
+  is_super_admin: boolean; farms: { farm_id: string; name: string; role: Role }[]
+}
 export type FarmMember = { farm_id: string; user_id: string; role: Role; display_name: string; prefs: MemberPrefs; created_at: string }
 export type FarmInvite = { id: string; farm_id: string; email: string; name: string; role: Role; invited_by: string | null; accepted_at: string | null; created_at: string }
 export type Pen = { id: string; farm_id: string; name: string; kind: string; capacity: number; sort: number; created_at: string }
@@ -36,6 +44,14 @@ export type NotificationResolution = { farm_id: string; user_id: string; alert_k
 export type StockItem = {
   id: string; farm_id: string; code: string; name: string; unit: string; qty: number; max_qty: number; low_qty: number
   note: string; expires_on: string | null; category: string; unit_price: number | null; active: boolean; created_at: string
+  /** Unit names come from the category (plural in `unit`). */
+  unit_singular: string
+  /** Validity in days after each purchase; `expires_on` is derived from it. */
+  shelf_life_days: number | null
+}
+export type StockMovement = {
+  id: string; farm_id: string; item_id: string; moved_on: string; reason: string; delta: number; qty_after: number
+  note: string; created_by: string | null; created_by_name: string; created_at: string
 }
 export type TreatmentProduct = {
   id: string; farm_id: string; code: string; name: string; dose_ml: number | null; per_kg: number | null
@@ -45,7 +61,7 @@ export type TreatmentProduct = {
 export type Breed = { id: string; farm_id: string; name: string; active: boolean; created_at: string }
 export type Symptom = { id: string; farm_id: string; name: string; icon: string; active: boolean; created_at: string }
 export type Account = { id: string; farm_id: string; name: string; kind: AccountKind; holder: string; initial_balance: number; color: string; active: boolean; created_at: string }
-export type Category = { id: string; farm_id: string; name: string; grp: CategoryGroup; color: string; description: string; item_type: 'Serviço' | 'Produto'; quantity_unit: string; baseline_price: number | null; active: boolean; created_at: string }
+export type Category = { id: string; farm_id: string; name: string; grp: CategoryGroup; color: string; description: string; item_type: 'Serviço' | 'Produto'; quantity_unit: string; quantity_unit_singular: string; baseline_price: number | null; active: boolean; created_at: string }
 export type Batch = {
   id: string; farm_id: string; code: string; phase: string; head_count: number; active: boolean
   opening_cost: number; opening_revenue: number; started_on: string | null; created_at: string
@@ -67,7 +83,7 @@ export type Debt = {
   next_due: string | null; account_id: string; splits: Split[]; created_at: string
 }
 export type Parameter = { id: string; farm_id: string; key: string; name: string; grp: ParamGroup; value: number; unit: string; description: string; created_at: string }
-export type HelpCategory = 'Saúde' | 'Reprodução' | 'Alimentação' | 'Maneio' | 'Usar o Porkflow'
+export type HelpCategory = 'Saúde' | 'Reprodução' | 'Alimentação' | 'Maneio' | 'Usar o Suino Gestor'
 export type HelpCtaTarget = 'birth' | 'illness' | 'transfer' | 'mating' | 'treatment' | 'weight' | 'death' | 'sale' | 'expense' | 'purchase' | 'buyAnimals' | 'activity' | 'settings' | 'reports'
 export type HelpImage = { src: string; caption: string; credit: string; source: string }
 export type HelpSection = { h: string; p?: string[]; list?: string[]; steps?: [string, string][]; tip?: string; img?: HelpImage }
@@ -105,12 +121,13 @@ export type Database = {
       weights: Table<Weight>
       tasks: Table<Task, 'location' | 'pen_id' | 'due_time' | 'assignee' | 'action' | 'done_at' | 'done_by'>
       notification_resolutions: Table<NotificationResolution, 'resolved_at'>
-      stock_items: Table<StockItem, 'unit' | 'qty' | 'max_qty' | 'low_qty' | 'note' | 'expires_on' | 'category' | 'unit_price' | 'active'>
+      stock_items: Table<StockItem, 'code' | 'unit' | 'unit_singular' | 'shelf_life_days' | 'qty' | 'max_qty' | 'low_qty' | 'note' | 'expires_on' | 'category' | 'unit_price' | 'active'>
+      stock_movements: Table<StockMovement, 'moved_on' | 'note' | 'created_by' | 'created_by_name'>
       treatment_products: Table<TreatmentProduct, 'dose_ml' | 'per_kg' | 'dose_text' | 'route' | 'withdrawal_days' | 'stock_code' | 'help_kind' | 'help_slug' | 'active'>
       breeds: Table<Breed, 'active'>
       symptoms: Table<Symptom, 'icon' | 'active'>
       accounts: Table<Account, 'holder' | 'initial_balance' | 'color' | 'active'>
-      categories: Table<Category, 'color' | 'description' | 'item_type' | 'quantity_unit' | 'baseline_price' | 'active'>
+      categories: Table<Category, 'color' | 'description' | 'item_type' | 'quantity_unit' | 'quantity_unit_singular' | 'baseline_price' | 'active'>
       batches: Table<Batch, 'phase' | 'head_count' | 'active' | 'opening_cost' | 'opening_revenue' | 'started_on'>
       transactions: Table<Transaction, 'quantity' | 'quantity_unit' | 'unit_price' | 'batch_id' | 'batch_ids' | 'batch_allocations' | 'stock_quantity' | 'notes' | 'source' | 'source_id' | 'created_by' | 'created_by_name'>
       transaction_files: Table<TransactionFile, 'size_bytes' | 'mime'>
@@ -125,6 +142,10 @@ export type Database = {
     }
     Functions: {
       create_farm: Fn<{ p_name: string; p_demo?: boolean }, string>
+      is_super_admin: Fn<Record<string, never>, boolean>
+      admin_create_farm: Fn<{ p_name: string; p_owner_email?: string | null; p_demo?: boolean }, string>
+      admin_farms: Fn<Record<string, never>, AdminFarm[]>
+      admin_users: Fn<Record<string, never>, AdminUser[]>
       accept_invites: Fn<Record<string, never>, number>
       update_my_membership: Fn<{ p_farm: string; p_prefs?: Json; p_display_name?: string }, undefined>
       log_treatment: Fn<{ p_farm: string; p_animal_ids: string[]; p_product: string; p_product_name: string; p_withdrawal_days?: number; p_stock_code?: string } & By, number>
@@ -137,6 +158,8 @@ export type Database = {
       log_sale: Fn<{ p_farm: string; p_animal: string; p_kg: number; p_price_per_kg: number; p_buyer: string; p_account: string; p_batch?: string } & By, number>
       buy_animals: Fn<{ p_farm: string; p_qty: number; p_stage: string; p_sex: string; p_breed: string; p_kg: number; p_pen: string; p_born: string; p_supplier: string; p_price: number; p_account: string } & By, string[]>
       log_stock_purchase: Fn<{ p_farm: string; p_item: string; p_qty: number; p_price: number; p_supplier: string; p_account: string } & By, number>
+      move_stock: Fn<{ p_farm: string; p_item: string; p_kind: 'in' | 'out'; p_qty: number; p_reason: string; p_note?: string; p_price?: number | null; p_account?: string | null; p_supplier?: string } & By, number>
+      count_stock: Fn<{ p_farm: string; p_item: string; p_count: number; p_note?: string } & By, number>
       pay_recurring: Fn<{ p_id: string; p_date?: string }, string>
       pay_debt: Fn<{ p_id: string; p_amount?: number; p_date?: string }, number>
       search_help: Fn<{ p_query?: string; p_cat?: string | null }, Json>

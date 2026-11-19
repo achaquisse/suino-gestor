@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useFarm } from '@/app/farm'
+import { firstDate } from '@/lib/periods'
 import { useOverlays } from '@/app/overlays'
 import type { Debt, RecurringExpense, Transaction } from '@/lib/database.types'
 import { useAccountBalances, useAccounts, useCategories, useDebts, useRecurring, useTransactions } from '@/lib/queries'
@@ -8,7 +9,7 @@ import CategorySheet from './CategorySheet'
 import Commitments, { type CommitTab } from './Commitments'
 import DebtSheet from './DebtSheet'
 import MoneyHeader from './MoneyHeader'
-import { AccountsCard, CategoriesCard, Kpis, TrendCard, type CatGroup } from './Overview'
+import { AccountsCard, CategoriesCard, Kpis, type CatGroup } from './Overview'
 import { PayDebtSheet, PayRecurringSheet } from './PaySheet'
 import RecurringSheet from './RecurringSheet'
 import TransactionsCard from './TransactionsCard'
@@ -27,7 +28,7 @@ type Modal =
 
 export default function MoneyPage() {
   const { canSeeMoney, isOwner } = useFarm()
-  if (!canSeeMoney) return <Empty icon="lock" title="Sem acesso às finanças" sub="O seu perfil não tem permissão para ver esta página." />
+  if (!canSeeMoney) return <Empty icon="lock" title="Sem acesso às despesas" sub="O seu perfil não tem permissão para ver esta página." />
   return <MoneyContent canWrite={isOwner} />
 }
 
@@ -42,10 +43,10 @@ function MoneyContent({ canWrite }: { canWrite: boolean }) {
   const withFiles = useFilesIndex()
 
   const params = useUrlParams()
-  const filters = useMemo(() => filtersFromParams(params), [params])
-  const [chart, setChart] = useUrlState<'rv' | 'res'>('chart', 'rv', ['rv', 'res'])
-  const selKey = params.get('bar')
-  const setSelKey = (k: string | null) => setUrlParams({ bar: k })
+  const { farm } = useFarm()
+  // "Desde o início" starts at the first movement (or the farm's creation).
+  const start = useMemo(() => firstDate([farm.created_at, ...(txQ.data ?? []).map((t) => t.tx_date)]), [farm.created_at, txQ.data])
+  const filters = useMemo(() => filtersFromParams(params, start), [params, start])
   const [group, setGroup] = useUrlState<CatGroup>('group', 'all', ['all', 'Investimento', 'Operacional'])
   const [tab, setTab] = useUrlState<CommitTab>('commit', 'rec', ['rec', 'debt'])
   const [modal, setModal] = useState<Modal | null>(null)
@@ -57,18 +58,19 @@ function MoneyContent({ canWrite }: { canWrite: boolean }) {
   const groups = useMemo(() => groupSiblings(txs), [txs])
 
   const base = useMemo(() => (filters.acct === 'all' ? txs : txs.filter((t) => t.account_id === filters.acct)), [txs, filters.acct])
-  const per = useMemo(() => base.filter((t) => t.tx_date >= filters.period.from && t.tx_date <= filters.period.to), [base, filters.period])
+  const inPeriod = useMemo(() => base.filter((t) => t.tx_date >= filters.period.from && t.tx_date <= filters.period.to), [base, filters.period])
+  // This page is about expenses; income and results live in Relatórios.
+  const per = useMemo(() => inPeriod.filter((t) => t.amount < 0), [inPeriod])
 
   const list = useMemo(() => {
     const q = filters.q.trim().toLowerCase()
     const l = per.filter((t) =>
-      (filters.type === 'all' || (filters.type === 'in' ? t.amount > 0 : t.amount < 0)) &&
       (!filters.cat || t.category === filters.cat) &&
       (!q || `${t.title} ${t.category} ${lookups.accountName(t.account_id)}`.toLowerCase().includes(q)))
     const s = [...l]
     if (filters.sort === 'old') s.sort((a, b) => a.tx_date.localeCompare(b.tx_date))
-    else if (filters.sort === 'high') s.sort((a, b) => b.amount - a.amount)
-    else if (filters.sort === 'low') s.sort((a, b) => a.amount - b.amount)
+    else if (filters.sort === 'high') s.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))
+    else if (filters.sort === 'low') s.sort((a, b) => Math.abs(a.amount) - Math.abs(b.amount))
     return s
   }, [per, filters, lookups])
 
@@ -83,7 +85,7 @@ function MoneyContent({ canWrite }: { canWrite: boolean }) {
   if (err) return <ErrorState error={err} />
 
   const patch = (p: Partial<Filters>) => setUrlParams({ ...filtersToParams(p), page: null })
-  const clear = () => setUrlParams({ ...filtersToParams(defaultFilters()), bar: null, page: null })
+  const clear = () => setUrlParams({ ...filtersToParams(defaultFilters()), page: null })
   const close = () => setModal(null)
   const balance = (filters.acct === 'all' ? balances : balances.filter((b) => b.id === filters.acct)).reduce((a, b) => a + b.balance, 0)
   const totalExpenses = -per.filter((t) => t.amount < 0).reduce((a, t) => a + t.amount, 0)
@@ -91,10 +93,9 @@ function MoneyContent({ canWrite }: { canWrite: boolean }) {
 
   return (
     <div className="flex flex-col gap-4 wide:gap-5">
-      <MoneyHeader filters={filters} accounts={accounts.filter((a) => a.active)} filtered={isFiltered(filters)} canWrite={canWrite} onChange={patch} onClear={clear} onNew={() => openFin()} />
+      <MoneyHeader start={start} filters={filters} accounts={accounts.filter((a) => a.active)} filtered={isFiltered(filters)} canWrite={canWrite} onChange={patch} onClear={clear} onNew={() => openFin()} />
       <Kpis per={per} balance={balance} accountCount={filters.acct === 'all' ? accounts.length : 1} />
-      <AccountsCard accounts={filters.acct === 'all' ? accounts : accounts.filter((a) => a.id === filters.acct)} balances={balances} txs={per} />
-      <TrendCard base={base} from={filters.period.from} to={filters.period.to} chart={chart} onChart={setChart} selKey={selKey} onSel={setSelKey} />
+      <AccountsCard accounts={filters.acct === 'all' ? accounts : accounts.filter((a) => a.id === filters.acct)} balances={balances} txs={inPeriod} />
       <CategoriesCard per={per} lookups={lookups} group={group} onGroup={setGroup} onPick={(cat) => setModal({ k: 'cat', cat })} />
       <Commitments tab={tab} onTab={setTab} recs={recs} debts={debts} lookups={lookups} canWrite={canWrite}
         onAdd={() => setModal(tab === 'rec' ? { k: 'rec', item: null } : { k: 'debt', item: null })}

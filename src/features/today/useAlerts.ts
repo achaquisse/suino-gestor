@@ -6,6 +6,7 @@ import { useCalendarEvents, useParam, useStock, useTableMutations, useTasks } fr
 import { errorMessage } from '@/lib/supabase'
 import { addDays, dFull, dShort, daysBetween, todayISO } from '@/lib/format'
 import { useToast } from '@/ui'
+import { qtyLabel } from '@/features/stock/model'
 
 export type Alert = {
   key: string
@@ -81,7 +82,7 @@ export function useAlerts() {
         key: `stock-low-${s.id}`,
         icon: 'inventory_2',
         title: `${s.name} em baixo`,
-        sub: `${s.qty} ${s.unit}`,
+        sub: qtyLabel(s.qty, s),
         action: 'Encomendar',
         act: () => openLog('purchase', { stockCode: s.code }),
       })
@@ -92,7 +93,7 @@ export function useAlerts() {
         sub: dShort(s.expires_on!),
         action: 'Ver stock',
         dismissible: true,
-        act: () => nav('/settings?tab=stock'),
+        act: () => nav('/stock?estado=expiring'),
       })
     }
     return out

@@ -142,7 +142,7 @@ function BuyForm({ penId, onClose }: { penId?: string; onClose: () => void }) {
               <div key={l} className="flex flex-col gap-0.5 rounded-[14px] bg-[#F7F7FB] p-3"><span className="text-xs text-muted">{l}</span><span className="tabular font-semibold">{v}</span></div>
             ))}
           </div>
-          <p className="m-0 text-[13px] text-muted">Os animais entram em quarentena de 21 dias e a despesa é lançada em Finanças · Animais{date ? ` (${dShort(date)})` : ''}.</p>
+          <p className="m-0 text-[13px] text-muted">Os animais entram em quarentena de 21 dias e a despesa é lançada em Despesas · Animais{date ? ` (${dShort(date)})` : ''}.</p>
           <FormError>{error}</FormError>
         </div>
       )}

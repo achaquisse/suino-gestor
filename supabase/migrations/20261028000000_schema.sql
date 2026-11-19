@@ -1,4 +1,4 @@
--- Porkflow schema: multi-farm, role-based access, herd + finance.
+-- Suino Gestor schema: multi-farm, role-based access, herd + finance.
 
 create extension if not exists pgcrypto;
 

@@ -90,10 +90,10 @@ export default function HelpPage() {
         <IconTile icon="support_agent" bg="#E6F6EE" fg="#0F7A44" size={44} iconSize={24} className="rounded-[14px]" />
         <div className="min-w-[200px] flex-1">
           <div className="font-semibold">Precisa de ajuda urgente?</div>
-          <div className="text-sm text-muted">Fale com o veterinário ou com o suporte do Porkflow.</div>
+          <div className="text-sm text-muted">Fale com o veterinário ou com o suporte do Suino Gestor.</div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button icon="mail" onClick={() => toast('Email aberto · suporte@porkflow.co.mz')}>Suporte</Button>
+          <Button icon="mail" onClick={() => toast('Email aberto · suporte@suino-gestor.co.mz')}>Suporte</Button>
         </div>
       </Card>
     </div>

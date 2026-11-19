@@ -1,18 +1,17 @@
 import { useState } from 'react'
-import { useFarm } from '@/app/farm'
 import type { Breed, Symptom, TreatmentProduct } from '@/lib/database.types'
 import { numP } from '@/lib/format'
-import { useBreeds, useStock, useSymptoms, useTableMutations, useTreatmentProducts } from '@/lib/queries'
 import { errorMessage } from '@/lib/supabase'
-import { Button, Card, ConfirmSheet, ErrorState, Field, FormError, Input, Loading, Select, Sheet, Toggle, useToast } from '@/ui'
-import { DataTable, type Col } from './DataTable'
+import { Button, ConfirmSheet, ErrorState, Field, FormError, Input, Loading, Select, Sheet, Toggle, useToast } from '@/ui'
+import { DataTable, type Col } from '@/features/settings/DataTable'
+import { useFarmRows, useFarmTableMutations } from './farmData'
 
 type Draft = { id?: string; code: string; name: string; dose_ml: string; per_kg: string; dose_text: string; route: string; withdrawal_days: string; stock_code: string; help_kind: 'art' | 'pb'; help_slug: string; active: boolean }
 const blank: Draft = { code: '', name: '', dose_ml: '', per_kg: '', dose_text: '', route: '', withdrawal_days: '0', stock_code: '', help_kind: 'art', help_slug: '', active: true }
 
-function ProductSheet({ draft, onClose }: { draft: Draft | null; onClose: () => void }) {
-  const stock = (useStock().data ?? []).filter((s) => s.active)
-  const { insert, update } = useTableMutations('treatment_products')
+function ProductSheet({ farmId, draft, onClose }: { farmId: string; draft: Draft | null; onClose: () => void }) {
+  const stock = (useFarmRows(farmId, 'stock_items', 'name').data ?? []).filter((s) => s.active)
+  const { insert, update } = useFarmTableMutations(farmId, 'treatment_products')
   const toast = useToast()
   const [d, setD] = useState<Draft>(draft ?? blank)
   const [seen, setSeen] = useState(draft)
@@ -57,14 +56,13 @@ function ProductSheet({ draft, onClose }: { draft: Draft | null; onClose: () => 
   </Sheet>
 }
 
-export default function CatalogsTab() {
-  const { isOwner } = useFarm()
-  const products = useTreatmentProducts()
-  const breeds = useBreeds()
-  const symptoms = useSymptoms()
-  const productMutations = useTableMutations('treatment_products')
-  const breedMutations = useTableMutations('breeds')
-  const symptomMutations = useTableMutations('symptoms')
+export default function CatalogsTab({ farmId }: { farmId: string }) {
+  const products = useFarmRows(farmId, 'treatment_products', 'created_at', ['dose_ml', 'per_kg'])
+  const breeds = useFarmRows(farmId, 'breeds', 'name')
+  const symptoms = useFarmRows(farmId, 'symptoms', 'created_at')
+  const productMutations = useFarmTableMutations(farmId, 'treatment_products')
+  const breedMutations = useFarmTableMutations(farmId, 'breeds')
+  const symptomMutations = useFarmTableMutations(farmId, 'symptoms')
   const toast = useToast()
   const [productSearch, setProductSearch] = useState('')
   const [breedSearch, setBreedSearch] = useState('')
@@ -115,20 +113,20 @@ export default function CatalogsTab() {
   return <div className="flex flex-col gap-5">
     <DataTable title="Produtos de tratamento" sub="Opções usadas no registo de tratamentos" addLabel="Novo produto" onAdd={() => setDraft(blank)}
       search={productSearch} onSearch={setProductSearch} rows={(products.data ?? []).filter((p) => `${p.name} ${p.code}`.toLowerCase().includes(productSearch.toLowerCase()))}
-      cols={productCols} readOnly={!isOwner} dim={(p) => !p.active} emptyMsg="Nenhum produto encontrado" minW={700}
+      cols={productCols} readOnly={false} dim={(p) => !p.active} emptyMsg="Nenhum produto encontrado" minW={700}
       onEdit={(p) => setDraft({ id: p.id, code: p.code, name: p.name, dose_ml: p.dose_ml == null ? '' : String(p.dose_ml), per_kg: p.per_kg == null ? '' : String(p.per_kg), dose_text: p.dose_text, route: p.route, withdrawal_days: String(p.withdrawal_days), stock_code: p.stock_code ?? '', help_kind: p.help_kind, help_slug: p.help_slug, active: p.active })}
       onDelete={(p) => p.active ? setOffProduct(p) : productMutations.update.mutate({ id: p.id, active: true }, { onSuccess: () => toast('Produto reactivado'), onError: (e) => toast(errorMessage(e), 'error') })} />
     <DataTable title="Raças" sub="Opções disponíveis nos registos de animais" addLabel="Nova raça" onAdd={() => { setBreed('new'); setBreedName(''); setError('') }}
       search={breedSearch} onSearch={setBreedSearch} rows={(breeds.data ?? []).filter((b) => b.name.toLowerCase().includes(breedSearch.toLowerCase()))}
-      cols={breedCols} readOnly={!isOwner} dim={(b) => !b.active} emptyMsg="Nenhuma raça encontrada" minW={350}
+      cols={breedCols} readOnly={false} dim={(b) => !b.active} emptyMsg="Nenhuma raça encontrada" minW={350}
       onEdit={(b) => { setBreed(b); setBreedName(b.name); setError('') }}
       onDelete={(b) => b.active ? setOffBreed(b) : breedMutations.update.mutate({ id: b.id, active: true }, { onSuccess: () => toast('Raça reactivada'), onError: (e) => toast(errorMessage(e), 'error') })} />
     <DataTable title="Sintomas" sub="Opções disponíveis no registo de doenças" addLabel="Novo sintoma" onAdd={() => { setSymptom('new'); setSymptomName(''); setSymptomIcon('healing'); setError('') }}
       search={symptomSearch} onSearch={setSymptomSearch} rows={(symptoms.data ?? []).filter((s) => s.name.toLowerCase().includes(symptomSearch.toLowerCase()))}
-      cols={symptomCols} readOnly={!isOwner} dim={(s) => !s.active} emptyMsg="Nenhum sintoma encontrado" minW={400}
+      cols={symptomCols} readOnly={false} dim={(s) => !s.active} emptyMsg="Nenhum sintoma encontrado" minW={400}
       onEdit={(s) => { setSymptom(s); setSymptomName(s.name); setSymptomIcon(s.icon); setError('') }}
       onDelete={(s) => s.active ? setOffSymptom(s) : symptomMutations.update.mutate({ id: s.id, active: true }, { onSuccess: () => toast('Sintoma reactivado'), onError: (e) => toast(errorMessage(e), 'error') })} />
-    <ProductSheet draft={draft} onClose={() => setDraft(null)} />
+    <ProductSheet farmId={farmId} draft={draft} onClose={() => setDraft(null)} />
     <Sheet open={!!breed} onClose={() => setBreed(null)} title={breed === 'new' ? 'Nova raça' : 'Editar raça'} maxWidth={400}
       footer={<><Button className="flex-1" onClick={() => setBreed(null)}>Cancelar</Button><Button className="flex-1" variant="primary" loading={breedMutations.insert.isPending || breedMutations.update.isPending} onClick={saveBreed}>Guardar</Button></>}>
       <Field label="Nome"><Input value={breedName} onChange={(e) => setBreedName(e.target.value)} /></Field><FormError>{error}</FormError>
@@ -147,6 +145,5 @@ export default function CatalogsTab() {
     <ConfirmSheet open={!!offSymptom} onClose={() => setOffSymptom(null)} danger title="Desactivar sintoma" confirmLabel="Desactivar" loading={symptomMutations.update.isPending}
       message={`${offSymptom?.name} deixa de aparecer nos novos registos. O histórico mantém-se.`}
       onConfirm={() => offSymptom && symptomMutations.update.mutate({ id: offSymptom.id, active: false }, { onSuccess: () => { toast('Sintoma desactivado'); setOffSymptom(null) }, onError: (e) => toast(errorMessage(e), 'error') })} />
-    {!isOwner && <Card className="p-4 text-sm text-muted">Apenas o proprietário pode alterar os catálogos.</Card>}
   </div>
 }

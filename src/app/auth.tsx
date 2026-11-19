@@ -15,7 +15,7 @@ type AuthState = {
 }
 
 const AuthContext = createContext<AuthState | null>(null)
-export const JUST_OUT_KEY = 'porkflow.justOut'
+export const JUST_OUT_KEY = 'suino-gestor.justOut'
 const AUTH_PARAMS = ['code', 'error', 'error_code', 'error_description']
 
 /** Reads an OAuth error from the redirect URL and strips auth params so a reload doesn't replay them. */

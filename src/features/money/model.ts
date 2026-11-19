@@ -1,40 +1,28 @@
 import { MUTED } from '@/lib/constants'
 import type { Account, Category, Split, Transaction } from '@/lib/database.types'
-import { addMonths, dShort, numP, todayISO } from '@/lib/format'
+import { dShort, numP } from '@/lib/format'
+import { DEFAULT_PERIOD, PERIODS, isPreset, presetRange, type PresetKey } from '@/lib/periods'
 
-export type PeriodKey = 'mes' | '3m' | 'ano' | 'custom'
+export type PeriodKey = PresetKey | 'custom'
 export type Period = { key: PeriodKey; from: string; to: string }
+export { PERIODS }
 
-export const PERIODS: readonly (readonly [Exclude<PeriodKey, 'custom'>, string])[] = [
-  ['mes', 'Este mês'],
-  ['3m', 'Últimos 3 meses'],
-  ['ano', 'Este ano'],
-]
-
-export function periodBounds(key: Exclude<PeriodKey, 'custom'>): [string, string] {
-  const today = todayISO()
-  const monthStart = `${today.slice(0, 8)}01`
-  if (key === 'mes') return [monthStart, today]
-  if (key === '3m') return [addMonths(monthStart, -2), today]
-  return [`${today.slice(0, 4)}-01-01`, today]
-}
+/** `start` is the first date with data ("Desde o início"). */
+export const periodBounds = (key: PresetKey, start?: string | null): [string, string] => presetRange(key, start)
 
 export const rangeLabel = (from: string, to: string) =>
-  from === to ? `${dShort(from)} ${to.slice(0, 4)}` : `${dShort(from)} – ${dShort(to)} ${to.slice(0, 4)}`
+  from === to ? `${dShort(from)} ${to.slice(0, 4)}` : `${dShort(from)}${from.slice(0, 4) === to.slice(0, 4) ? '' : ' ' + from.slice(0, 4)} – ${dShort(to)} ${to.slice(0, 4)}`
 
 export const periodLabel = (p: Period) => (p.key === 'custom' ? 'Intervalo' : PERIODS.find(([k]) => k === p.key)?.[1] ?? '')
 
-export const defaultPeriod = (): Period => {
-  const [from, to] = periodBounds('3m')
-  return { key: '3m', from, to }
-}
-
-export const makePeriod = (key: Exclude<PeriodKey, 'custom'>): Period => {
-  const [from, to] = periodBounds(key)
+export const makePeriod = (key: PresetKey, start?: string | null): Period => {
+  const [from, to] = periodBounds(key, start)
   return { key, from, to }
 }
 
-export const isIncome = (t: Transaction) => t.amount > 0 && t.category !== 'Aporte'
+export const defaultPeriod = (start?: string | null): Period => makePeriod(DEFAULT_PERIOD, start)
+
+export const isIncome = (t: Transaction) => t.amount > 0 && t.category !== 'Injeção de capital'
 
 export const shortAcct = (n: string) => n.replace('Investidor ', 'Inv. ')
 
@@ -106,31 +94,26 @@ export const stampLabel = (iso: string) => {
 export type Filters = {
   period: Period
   acct: string
-  type: 'all' | 'in' | 'out'
   cat: string | null
   q: string
   sort: 'new' | 'old' | 'high' | 'low'
 }
 
-export const defaultFilters = (): Filters => ({ period: defaultPeriod(), acct: 'all', type: 'all', cat: null, q: '', sort: 'new' })
+export const defaultFilters = (start?: string | null): Filters => ({ period: defaultPeriod(start), acct: 'all', cat: null, q: '', sort: 'new' })
 
-const TYPES: readonly Filters['type'][] = ['all', 'in', 'out']
 const SORTS: readonly Filters['sort'][] = ['new', 'old', 'high', 'low']
 const ISO = /^\d{4}-\d{2}-\d{2}$/
 
-export function filtersFromParams(p: URLSearchParams): Filters {
-  const d = defaultFilters()
+export function filtersFromParams(p: URLSearchParams, start?: string | null): Filters {
+  const d = defaultFilters(start)
   const key = p.get('period')
   const from = p.get('from') ?? ''
   const to = p.get('to') ?? ''
-  const preset = PERIODS.find(([k]) => k === key)?.[0]
-  const period: Period = key === 'custom' && ISO.test(from) && ISO.test(to) && from <= to ? { key: 'custom', from, to } : preset ? makePeriod(preset) : d.period
-  const type = p.get('type') as Filters['type']
+  const period: Period = key === 'custom' && ISO.test(from) && ISO.test(to) && from <= to ? { key: 'custom', from, to } : isPreset(key) ? makePeriod(key, start) : d.period
   const sort = p.get('sort') as Filters['sort']
   return {
     period,
     acct: p.get('acct') || d.acct,
-    type: TYPES.includes(type) ? type : d.type,
     cat: p.get('cat') || d.cat,
     q: p.get('q') ?? d.q,
     sort: SORTS.includes(sort) ? sort : d.sort,
@@ -139,16 +122,15 @@ export function filtersFromParams(p: URLSearchParams): Filters {
 
 export function filtersToParams(f: Partial<Filters>): Record<string, string | null> {
   const out: Record<string, string | null> = {}
-  if (f.period) Object.assign(out, f.period.key === 'custom' ? { period: 'custom', from: f.period.from, to: f.period.to } : { period: f.period.key === '3m' ? null : f.period.key, from: null, to: null })
+  if (f.period) Object.assign(out, f.period.key === 'custom' ? { period: 'custom', from: f.period.from, to: f.period.to } : { period: f.period.key === DEFAULT_PERIOD ? null : f.period.key, from: null, to: null })
   if ('acct' in f) out.acct = f.acct === 'all' ? null : f.acct ?? null
-  if ('type' in f) out.type = f.type === 'all' ? null : f.type ?? null
   if ('cat' in f) out.cat = f.cat ?? null
   if ('q' in f) out.q = f.q || null
   if ('sort' in f) out.sort = f.sort === 'new' ? null : f.sort ?? null
   return out
 }
 
-export const isFiltered = (f: Filters) => f.period.key !== '3m' || f.acct !== 'all' || f.type !== 'all' || !!f.cat || !!f.q
+export const isFiltered = (f: Filters) => f.period.key !== DEFAULT_PERIOD || f.acct !== 'all' || !!f.cat || !!f.q
 
 export function groupSiblings(all: Transaction[]) {
   const m = new Map<string, Transaction[]>()

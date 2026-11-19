@@ -294,9 +294,9 @@ export function Sheet({ open, onClose, title, onBack, children, footer, maxWidth
   return createPortal(
     <div onClick={onClose} className="fixed inset-0 z-50 flex animate-pf-fade items-end justify-center bg-[rgba(22,22,40,0.32)] backdrop-blur-[6px] wide:items-center wide:p-6">
       <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={titleId} onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[90vh] w-full animate-pf-sheet flex-col overflow-hidden rounded-t-[22px] bg-white shadow-sheet outline-none wide:rounded-[20px]"
+        className="flex max-h-[90dvh] w-full animate-pf-sheet flex-col overflow-hidden rounded-t-[22px] bg-white shadow-sheet outline-none wide:rounded-[20px]"
         style={{ maxWidth }}>
-        <div className="overflow-y-auto px-5 pt-2.5 pb-5">
+        <div className={cx('overflow-y-auto overscroll-contain px-5 pt-2.5', footer ? 'pb-5' : 'pb-[max(20px,env(safe-area-inset-bottom))] wide:pb-5')}>
           <div className="mx-auto mt-0.5 mb-3 h-1 w-10 rounded bg-line-strong wide:hidden" />
           <div className="mb-3.5 flex items-center gap-2">
             {onBack && <IconButton icon="chevron_left" label="Voltar" onClick={onBack} className="-ml-2" />}
@@ -305,7 +305,7 @@ export function Sheet({ open, onClose, title, onBack, children, footer, maxWidth
           </div>
           {children}
         </div>
-        {footer && <div className="flex gap-2 border-t border-divider bg-white px-5 py-3.5">{footer}</div>}
+        {footer && <div className="flex gap-2 border-t border-divider bg-white px-5 pt-3.5 pb-[max(14px,env(safe-area-inset-bottom))] wide:pb-3.5">{footer}</div>}
       </div>
     </div>,
     document.body,
@@ -354,7 +354,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext value={show}>
       {children}
       {toast && createPortal(
-        <div role="status" aria-live="polite" className="fixed bottom-[110px] left-1/2 z-[60] w-max max-w-[calc(100vw-32px)] -translate-x-1/2 wide:bottom-7">
+        <div role="status" aria-live="polite" className="fixed bottom-[calc(170px+env(safe-area-inset-bottom))] left-1/2 z-[60] w-max max-w-[calc(100vw-32px)] -translate-x-1/2 wide:bottom-7">
           <div key={toast.id} className="flex animate-pf-toast items-center gap-2.5 rounded-[14px] bg-ink px-4 py-3 text-sm text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
             <Icon name={toast.kind === 'error' ? 'error' : 'check_circle'} size={20} className={toast.kind === 'error' ? 'text-[#FF8A80]' : 'text-[#5FD49A]'} />
             {toast.msg}
@@ -483,3 +483,4 @@ export function HelpLinks({ links, className }: { links: { label: string; to: st
     </div>
   )
 }
+export { Logo, PigFace } from './Logo'

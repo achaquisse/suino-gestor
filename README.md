@@ -1,14 +1,14 @@
-# Porkflow
+# Suino Gestor
 
 **The pocket farm manager for small pig producers: every animal, pen, metical and task in one simple app that works in the field, even offline.**
 
 Small pig businesses run on notebooks, WhatsApp messages and memory. That works for ten animals and breaks at fifty: a missed vaccine, a sow whose heat (cio) went unnoticed, or feed that runs out on a Sunday costs real money. Owners also struggle to show investors where their money went and whether the business is profitable.
 
-Porkflow is one source of truth. It tells the farmer what to do today, records what was done, and turns those records into a clear picture of herd health, stock and cash. It is multi-tenant from day one: it starts as the tool for one farm and can grow into a product any pig producer signs up for.
+Suino Gestor is one source of truth. It tells the farmer what to do today, records what was done, and turns those records into a clear picture of herd health, stock and cash. It is multi-tenant from day one: it starts as the tool for one farm and can grow into a product any pig producer signs up for.
 
 ## Who it is for
 
-| Persona                | Needs from Porkflow                                                       | Main device          |
+| Persona                | Needs from Suino Gestor                                                       | Main device          |
 | ---------------------- | ------------------------------------------------------------------------- | -------------------- |
 | **Owner / manager**    | Costs, sales, profit and investor balances; plan purchases                | Phone and laptop     |
 | **Caretaker**          | Today's tasks; quick logging of feeding, treatments, births and deaths    | Phone, often offline |
@@ -40,7 +40,7 @@ A bottom tab bar on mobile (sidebar on desktop) and a floating **+** button for 
 | **Settings** | `/settings` | Farm details, funding accounts, categories, parameters and team                                       |
 | **Quick log (+)** | —      | Herd, health and money forms in one sheet, prefilled from context                                     |
 
-The UI implements the Claude Design mockup in `mockup/Porkflow v5.dc.html`.
+The UI implements the Claude Design mockup in `mockup/Suino Gestor v5.dc.html`.
 
 ## Stack
 
@@ -53,7 +53,7 @@ React 19 + Vite, TanStack Query, React Router, Tailwind v4, Zod, Supabase (Postg
    - Google Cloud Console → _APIs & Services → Credentials_ → create an _OAuth client ID_ (Web application).
      Authorized redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback`.
    - Supabase → _Authentication → Sign In / Providers → Google_: enable it and paste the client ID and secret.
-   - Supabase → _Authentication → URL Configuration_: set **Site URL** to your production origin and add every origin the app runs on to **Redirect URLs** (e.g. `http://localhost:5173`, `http://localhost:4173`, `https://porkflow.example.com`). The app redirects back to `window.location.origin`.
+   - Supabase → _Authentication → URL Configuration_: set **Site URL** to your production origin and add every origin the app runs on to **Redirect URLs** (e.g. `http://localhost:5173`, `http://localhost:4173`, `https://suino-gestor.example.com`). The app redirects back to `window.location.origin`.
    - Keep email/password sign-up disabled unless email confirmation is on: invites are matched by email, and `accept_invites()` only honours confirmed addresses.
 3. **Env**: `cp .env.example .env` and fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`.
 4. `npm install && npm run dev`

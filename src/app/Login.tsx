@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Icon, Spinner } from '@/ui'
+import { Icon, IconTile, Logo, Sheet, Spinner } from '@/ui'
 import { errorMessage, supabase, supabaseConfigured } from '@/lib/supabase'
 import { JUST_OUT_KEY, useAuth } from './auth'
 
@@ -14,41 +14,63 @@ function GoogleLogo() {
   )
 }
 
-function DevEmailSignIn() {
-  const [email, setEmail] = useState('')
-  const [state, setState] = useState<'idle' | 'sending' | 'sent'>('idle')
+/** Local test accounts created by supabase/seed.sql (dev builds only). */
+const DEV_PASSWORD = 'suino123'
+const DEV_USERS = [
+  { email: 'dono@suinogestor.dev', name: 'Carlos Nhantumbo', role: 'Proprietário', farms: 'Granja Boane · Quinta da Matola', icon: 'shield_person', tint: '#EEECFE', ink: '#4B3CD6' },
+  { email: 'tratador@suinogestor.dev', name: 'João Mabunda', role: 'Tratador', farms: 'Granja Boane', icon: 'agriculture', tint: '#E6F6EE', ink: '#0F7A44' },
+  { email: 'vet@suinogestor.dev', name: 'Dra. Sitoe', role: 'Veterinária', farms: 'Quinta da Matola', icon: 'stethoscope', tint: '#E3F4FD', ink: '#1C6FA8' },
+  { email: 'achaquisse1@gmail.com', name: 'Administrador', role: 'Super admin', farms: 'Todas as granjas', icon: 'admin_panel_settings', tint: '#FDF1E2', ink: '#A2601A' },
+] as const
+
+function DevAccountPicker({ open, onClose, onGoogle }: { open: boolean; onClose: () => void; onGoogle: () => void }) {
+  const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const send = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const signInAs = async (email: string) => {
     setError(null)
-    setState('sending')
-    const { error } = await supabase.auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: window.location.origin } })
+    setBusy(email)
+    const { error } = await supabase.auth.signInWithPassword({ email, password: DEV_PASSWORD })
     if (error) {
-      setError(errorMessage(error))
-      setState('idle')
-    } else setState('sent')
+      setError(error.message === 'Invalid login credentials' ? 'Conta de teste não encontrada. Corra npm run db:reset para criar as contas.' : errorMessage(error))
+      setBusy(null)
+    }
   }
 
   return (
-    <form onSubmit={send} className="flex flex-col gap-2.5 rounded-[14px] border border-dashed border-line-strong bg-white/60 p-3.5">
-      <div className="text-[12px] font-semibold tracking-[0.06em] text-faint uppercase">Desenvolvimento · entrar por email</div>
-      {state === 'sent' ? (
-        <p className="m-0 text-sm text-ink-2">
-          Link enviado. Abra o <a href="http://127.0.0.1:54324" target="_blank" rel="noreferrer">Mailpit</a> e clique em “Log In”.
-        </p>
-      ) : (
-        <div className="flex gap-2">
-          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nome@exemplo.com"
-            className="h-11 min-w-0 flex-1 rounded-xl border border-line bg-white px-3 text-sm outline-none focus:border-accent" />
-          <button type="submit" disabled={state === 'sending'}
-            className="flex h-11 items-center gap-2 rounded-xl border-0 bg-cta px-4 text-sm font-semibold text-white disabled:opacity-60">
-            {state === 'sending' ? <Spinner light /> : <Icon name="mail" />}Enviar link
-          </button>
-        </div>
-      )}
-      {error && <p className="m-0 text-sm text-danger">{error}</p>}
-    </form>
+    <Sheet open={open} onClose={onClose} title="Escolher conta de teste" maxWidth={440}>
+      <div className="flex flex-col gap-3">
+        <p className="m-0 text-sm text-ink-2">Modo de desenvolvimento: entre com uma conta local, sem Google.</p>
+        <ul className="m-0 flex list-none flex-col gap-2 p-0">
+          {DEV_USERS.map((u, i) => (
+            <li key={u.email} className="animate-pf-up" style={{ animationDelay: `${i * 60}ms` }}>
+              <button type="button" onClick={() => signInAs(u.email)} disabled={busy !== null}
+                className="flex w-full items-center gap-3 rounded-2xl border border-line bg-white p-3 text-left transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-[0_8px_20px_rgba(22,22,40,0.08)] active:scale-[0.99] disabled:opacity-60 disabled:hover:translate-y-0">
+                <IconTile icon={u.icon} bg={u.tint} fg={u.ink} size={42} />
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="flex items-center gap-2 text-sm font-semibold text-ink">
+                    {u.name}
+                    <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: u.tint, color: u.ink }}>{u.role}</span>
+                  </span>
+                  <span className="truncate text-[13px] text-muted">{u.email}</span>
+                  <span className="truncate text-[12px] text-faint">{u.farms}</span>
+                </span>
+                {busy === u.email ? <Spinner /> : <Icon name="chevron_right" className="text-faint" />}
+              </button>
+            </li>
+          ))}
+        </ul>
+        {error && (
+          <div className="flex animate-pf-pop items-start gap-2.5 rounded-[14px] bg-danger-soft px-3.5 py-3 text-sm text-danger">
+            <Icon name="error" />{error}
+          </div>
+        )}
+        <button type="button" onClick={onGoogle} disabled={busy !== null}
+          className="mt-1 flex items-center justify-center gap-2 self-center border-0 bg-transparent p-1 text-[13px] font-medium text-muted hover:text-ink disabled:opacity-60">
+          <GoogleLogo />Usar uma conta Google real
+        </button>
+      </div>
+    </Sheet>
   )
 }
 
@@ -63,7 +85,11 @@ export function Login() {
     return v
   })
 
+  const [picker, setPicker] = useState(false)
+  const devLogin = import.meta.env.DEV && supabaseConfigured
+
   const signIn = async () => {
+    setPicker(false)
     setError(null)
     setSigning(true)
     try {
@@ -74,27 +100,28 @@ export function Login() {
     }
   }
 
+  const rise = (i: number) => ({ animationDelay: `${80 + i * 70}ms` })
+
   return (
-    <div className="app-bg flex min-h-screen w-full items-stretch">
-      <div className="relative hidden flex-1 basis-1/2 flex-col justify-between overflow-hidden bg-[linear-gradient(150deg,#8B5CF6_0%,#5B4CF5_50%,#2A8FE0_100%)] p-12 text-white wide:flex">
-        <div className="absolute -top-40 -right-40 h-[520px] w-[520px] rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.22),rgba(255,255,255,0)_65%)]" />
-        <div className="relative flex items-center gap-3">
-          <div className="grid h-[42px] w-[42px] place-items-center rounded-[13px] border border-white/35 bg-white/20 text-base font-bold">P</div>
-          <span className="text-base font-semibold">Porkflow</span>
-        </div>
-        <div className="relative flex max-w-[460px] animate-pf-up flex-col gap-4">
-          <h2 className="m-0 text-[38px] leading-[1.08] font-semibold tracking-[-0.03em] text-balance">A sua granja, organizada.</h2>
-          <p className="m-0 text-[15px] leading-normal opacity-[0.92] text-pretty">Animais, tarefas e finanças num só lugar — para quem gere e para quem trata.</p>
-        </div>
-        <div className="relative text-[13px] opacity-85">Gestão de suinicultura</div>
+    <div className="login-bg relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden px-4 py-10">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+        <div className="login-blob -top-24 -left-20 h-[380px] w-[380px] bg-[#A78BFA]" />
+        <div className="login-blob top-1/3 -right-28 h-[420px] w-[420px] bg-[#7DD3FC]" style={{ animationDelay: '-6s' }} />
+        <div className="login-blob -bottom-32 left-1/4 h-[340px] w-[340px] bg-[#C4B5FD]" style={{ animationDelay: '-12s' }} />
+        <div className="login-grid absolute inset-0" />
       </div>
-      <div className="grid flex-1 basis-1/2 place-items-center px-5 py-8">
-        <div className="flex w-full max-w-[380px] animate-pf-up flex-col gap-6">
-          <div className="grid h-[52px] w-[52px] place-items-center rounded-2xl bg-[linear-gradient(135deg,#8B5CF6,#5B4CF5_55%,#22B8F0)] text-xl font-bold text-white shadow-[0_10px_28px_rgba(91,76,240,0.35)]">P</div>
-          <div className="flex flex-col gap-1.5">
-            <h1 className="m-0 text-[26px] font-semibold tracking-[-0.025em]">Entrar no Porkflow</h1>
-            <p className="m-0 text-ink-2">Use a sua conta Google para continuar.</p>
-          </div>
+
+      <main className="relative flex w-full max-w-[400px] flex-col items-center gap-6">
+        <div className="animate-pf-up" style={rise(0)}>
+          <Logo size={72} title="Suino Gestor" className="login-logo rounded-[22px] shadow-[0_18px_40px_rgba(91,76,240,0.35)]" />
+        </div>
+
+        <div className="flex animate-pf-up flex-col items-center gap-2 text-center" style={rise(1)}>
+          <h1 className="m-0 text-[28px] leading-tight font-semibold tracking-[-0.03em] text-balance">Bem-vindo ao Suino Gestor</h1>
+          <p className="m-0 max-w-[320px] text-[15px] text-ink-2 text-pretty">A sua granja, organizada. Animais, tarefas e finanças num só lugar.</p>
+        </div>
+
+        <div className="glass flex w-full animate-pf-up flex-col gap-4 rounded-[24px] border border-white/80 p-5 shadow-[0_1px_2px_rgba(22,22,40,0.04),0_20px_50px_rgba(22,22,40,0.08)]" style={rise(2)}>
           {justOut && (
             <div className="flex animate-pf-pop items-center gap-2.5 rounded-[14px] bg-success-soft px-3.5 py-3 text-sm text-success-strong">
               <Icon name="check_circle" />Sessão terminada com sucesso.
@@ -107,21 +134,31 @@ export function Login() {
             </div>
           )}
           {error && (
-            <div className="flex items-center gap-2.5 rounded-[14px] bg-danger-soft px-3.5 py-3 text-sm text-danger">
+            <div className="flex animate-pf-pop items-center gap-2.5 rounded-[14px] bg-danger-soft px-3.5 py-3 text-sm text-danger">
               <Icon name="error" />{error}
             </div>
           )}
-          <button type="button" onClick={signIn} disabled={signing || !supabaseConfigured}
-            className="flex h-[54px] items-center justify-center gap-3 rounded-[14px] border border-[#DADCE0] bg-white text-sm font-semibold text-[#1F1F1F] shadow-[0_1px_2px_rgba(22,22,40,0.06)] transition-[box-shadow,transform,border-color] hover:border-[#C4C7CE] hover:shadow-[0_6px_18px_rgba(22,22,40,0.10)] active:scale-[0.98] disabled:opacity-60">
+          <button type="button" onClick={devLogin ? () => setPicker(true) : signIn} disabled={signing || !supabaseConfigured}
+            className="login-shine flex h-[54px] items-center justify-center gap-3 rounded-2xl border border-[#DADCE0] bg-white text-[15px] font-semibold text-[#1F1F1F] shadow-[0_1px_2px_rgba(22,22,40,0.06)] transition-[box-shadow,transform,border-color] duration-200 hover:-translate-y-0.5 hover:border-[#C4C7CE] hover:shadow-[0_10px_24px_rgba(22,22,40,0.10)] active:translate-y-0 active:scale-[0.98] disabled:translate-y-0 disabled:opacity-60 disabled:shadow-none">
             {signing ? <Spinner /> : <GoogleLogo />}
             {signing ? 'A ligar ao Google…' : 'Continuar com Google'}
           </button>
-          {import.meta.env.DEV && supabaseConfigured && <DevEmailSignIn />}
-          <p className="m-0 text-[13px] text-muted text-pretty">
-            Ao continuar, aceita os <a href="#">Termos de utilização</a> e a <a href="#">Política de privacidade</a>. Só os membros convidados pelo proprietário têm acesso à granja.
-          </p>
+          {devLogin && <p className="m-0 -mt-1 text-center text-[12px] text-faint">Modo de desenvolvimento · contas de teste disponíveis</p>}
         </div>
-      </div>
+
+        <ul className="m-0 flex animate-pf-up list-none flex-wrap justify-center gap-2 p-0" style={rise(3)}>
+          {([['pets', 'Animais'], ['task_alt', 'Tarefas'], ['payments', 'Finanças']] as const).map(([icon, label]) => (
+            <li key={label} className="flex items-center gap-1.5 rounded-full border border-white/80 bg-white/60 px-3 py-1.5 text-[13px] font-medium text-ink-2 backdrop-blur">
+              <Icon name={icon} size={16} className="text-accent" />{label}
+            </li>
+          ))}
+        </ul>
+
+        <p className="m-0 max-w-[340px] animate-pf-up text-center text-[12.5px] leading-relaxed text-muted text-pretty" style={rise(4)}>
+          Ao continuar, aceita os <a href="#">Termos de utilização</a> e a <a href="#">Política de privacidade</a>. Só os membros convidados pelo proprietário têm acesso à granja.
+        </p>
+      </main>
+      {devLogin && <DevAccountPicker open={picker} onClose={() => setPicker(false)} onGoogle={signIn} />}
     </div>
   )
 }

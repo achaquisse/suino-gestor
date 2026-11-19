@@ -42,7 +42,7 @@ export default function TodayPage() {
 
   const cash = useMemo(() => {
     const ym = today.slice(0, 7)
-    const rows = (txQ.data ?? []).filter((t) => t.tx_date.slice(0, 7) === ym && t.kind !== 'Aporte')
+    const rows = (txQ.data ?? []).filter((t) => t.tx_date.slice(0, 7) === ym && t.kind !== 'Injeção de capital')
     const inT = rows.filter((t) => t.amount > 0).reduce((a, t) => a + t.amount, 0)
     const outT = rows.filter((t) => t.amount < 0).reduce((a, t) => a + t.amount, 0)
     return { inT, outT, net: inT + outT }

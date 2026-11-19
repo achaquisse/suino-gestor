@@ -199,7 +199,7 @@ export default function AnimalPage() {
         </div>
       </Card>
 
-      <Tabs options={histTabs} value={curTab} onChange={setTab} className="self-start rounded-[14px] bg-sunken p-1" />
+      <Tabs options={histTabs} value={curTab} onChange={setTab} className="max-w-full self-start rounded-[14px] bg-sunken p-1" />
 
       {curTab === 'resumo' && (
         <>

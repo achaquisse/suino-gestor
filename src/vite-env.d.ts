@@ -8,3 +8,10 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+interface Window {
+  __SUINO_GESTOR_CONFIG__?: {
+    SUPABASE_URL?: string
+    SUPABASE_PUBLISHABLE_KEY?: string
+  }
+}

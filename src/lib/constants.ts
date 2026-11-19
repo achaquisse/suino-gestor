@@ -65,7 +65,7 @@ export const HCAT: Record<string, readonly [icon: string, bg: string, fg: string
   'Reprodução': ['favorite', '#FCE7F3', '#B0306E'],
   'Alimentação': ['nutrition', '#FDF1E2', '#A2601A'],
   'Maneio': ['fence', '#E6F6EE', '#0F7A44'],
-  'Usar o Porkflow': ['devices', '#EEECFE', '#4B3CD6'],
+  'Usar o Suino Gestor': ['devices', '#EEECFE', '#4B3CD6'],
 }
 
 export const PEN_ICON = (name: string, kind: string): readonly [icon: string, bg: string, fg: string] => {
