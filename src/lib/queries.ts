@@ -54,6 +54,13 @@ export const useAnimalEvents = (animalId: string | undefined) =>
     if (error) throw error
     return data ?? []
   }, !!animalId)
+export const useAnimalPhotos = (animalId: string | undefined) =>
+  useFarmQuery(['animal_photos', animalId], async () => {
+    const { data, error } = await supabase.from('animal_photos').select('*').eq('animal_id', animalId!)
+      .order('taken_on', { ascending: false }).order('created_at', { ascending: false })
+    if (error) throw error
+    return data ?? []
+  }, !!animalId)
 export const useWeights = (animalId: string | undefined) =>
   useFarmQuery(['weights', animalId], async () => {
     const { data, error } = await supabase.from('weights').select('*').eq('animal_id', animalId!).order('measured_on')

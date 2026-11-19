@@ -29,7 +29,7 @@ function useAdminFarms() {
   })
 }
 
-function useAdminUsers() {
+export function useAdminUsers() {
   return useQuery({
     queryKey: ['admin', 'users'],
     queryFn: async () => {
@@ -237,6 +237,7 @@ function FarmScoped({ farmId, setFarmId, sub, children }: { farmId: string | nul
 function UsersTab() {
   const users = useAdminUsers()
   const [q, setQ] = useState('')
+  const navigate = useNavigate()
   const rows = useMemo(() => {
     const needle = fold(q.trim())
     return (users.data ?? []).filter((u) => !needle || fold(`${u.name} ${u.email}`).includes(needle))
@@ -248,20 +249,23 @@ function UsersTab() {
   return (
     <div className="flex flex-col gap-4">
       <SearchInput value={q} onChange={setQ} placeholder="Pesquisar nome ou email" />
-      <div className="text-[13px] text-muted">{users.data.length} utilizadores · {users.data.filter((u) => !u.farms.length).length} sem granja</div>
+      <div className="text-[13px] text-muted">{users.data.length} utilizadores · {users.data.filter((u) => !u.farms.length).length} sem granja · {users.data.filter((u) => u.disabled_at).length} desactivados · abra um utilizador para ver a actividade</div>
       {rows.length === 0 ? (
         <Card className="p-2"><Empty icon="person_search" title="Nenhum utilizador encontrado" /></Card>
       ) : (
         <ul aria-label="Utilizadores" className="m-0 flex list-none flex-col gap-2.5 p-0">
           {rows.map((u) => (
             <li key={u.id}>
-              <Card as="article" className="flex flex-wrap items-center gap-3.5 p-4">
+              <Card as="article" className={cx('relative flex flex-wrap items-center gap-3.5 p-4 hover:border-[#D4D4E2]', u.disabled_at && 'opacity-60')}>
+                <button type="button" onClick={() => navigate(`/admin/utilizadores/${u.id}`)} aria-label={`Abrir ${u.name || u.email}`}
+                  className="absolute inset-0 rounded-card border-0 bg-transparent p-0" />
                 <div className="flex min-w-0 flex-1 basis-[240px] items-center gap-3">
                   <Avatar initials={initials(u.name || u.email)} size={42} />
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <h3 className="m-0 truncate text-[15px] font-semibold">{u.name || u.email.split('@')[0]}</h3>
                       {u.is_super_admin && <Chip tone="amber">Super admin</Chip>}
+                      {u.disabled_at && <Chip tone="red">Desactivada</Chip>}
                     </div>
                     <div className="truncate text-[13px] text-muted">{u.email}</div>
                     <div className="mt-0.5 text-xs text-faint">{u.last_sign_in_at ? `Último acesso ${dLong(u.last_sign_in_at.slice(0, 10))}` : 'Nunca entrou'}</div>

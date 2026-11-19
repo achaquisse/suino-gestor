@@ -5,7 +5,7 @@ import { errorMessage } from '@/lib/supabase'
 import { useAnimals, usePens, useTableMutations, useTeamNames } from '@/lib/queries'
 import { todayISO } from '@/lib/format'
 import type { Animal } from '@/lib/database.types'
-import { Button, Field, FormError, Icon, Input, Select, Sheet, useToast } from '@/ui'
+import { Button, Field, FormError, Icon, Input, Select, Sheet, cx, useToast } from '@/ui'
 
 export type FormProps = { ctx: LogContext; onBack?: () => void; onClose: () => void }
 
@@ -123,3 +123,14 @@ export const firstId = (ctx: LogContext, list: Animal[]) =>
   ctx.animalId && list.some((a) => a.id === ctx.animalId) ? ctx.animalId : (list[0]?.id ?? '')
 
 export const isSow = (a: Animal) => a.stage === 'Porca' || a.stage === 'Leitoa'
+
+/** A toggle chip, for picking animals. */
+export function Chipper({ on, icon, onClick, children, title, tab }: { on: boolean; icon?: string; onClick: () => void; children: ReactNode; title?: string; tab?: boolean }) {
+  return (
+    <button type="button" title={title} aria-pressed={on} onClick={onClick}
+      className={cx('flex h-9 items-center gap-1 rounded-full border-[1.5px] px-3 text-[13px] font-semibold', tab && 'tabular',
+        on ? 'border-accent bg-accent-wash text-accent-strong' : 'border-line-strong bg-white text-ink-2')}>
+      {icon && <Icon name={icon} size={14} />}{children}
+    </button>
+  )
+}

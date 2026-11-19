@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router'
 import { useFarm } from '@/app/farm'
 import { setUrlParams, useUrlState, type UrlPatch } from '@/lib/urlState'
 import { useOverlays } from '@/app/overlays'
-import { Button, Card, ErrorState, Icon, IconTile, Loading, Progress, SearchInput, Segmented, cx } from '@/ui'
-import { ACC, GREEN, INK, RED, SGC, SGL, type StageGroup } from '@/lib/constants'
+import { Button, Card, ErrorState, IconTile, Loading, SearchInput, cx } from '@/ui'
+import { ACC, GREEN, RED, SGC, SGL, type StageGroup } from '@/lib/constants'
 import { plural } from '@/lib/format'
-import { ACAT, CAT_HELP, PEN_GROUPS, penFlag, penGroupId, type CatId, type HA } from './lib'
+import { ACAT, CAT_HELP, penFlag, penHelp, type CatId, type HA } from './lib'
 import { AnimalTable, HelpBtn, Kpi, KpiGrid, avgLabel, avgOf, useHerd } from './parts'
+import { PenLayout, type PenInfo } from './PenLayout'
 
 type StageFilter = StageGroup | 'all'
 type StFilter = 'all' | 'attn' | CatId
@@ -20,7 +21,6 @@ export default function HerdPage() {
   const { canEditHerd } = useFarm()
   const { openLog } = useOverlays()
   const { list, pens, loading, error, refetch } = useHerd()
-  const [view] = useUrlState<'pens' | 'list'>('view', 'pens', ['pens', 'list'])
   const [stage] = useUrlState<StageFilter>('stage', 'all', STAGE_KEYS)
   const [st] = useUrlState<StFilter>('status', 'all', ST_KEYS)
   const [query] = useUrlState('q', '')
@@ -30,7 +30,6 @@ export default function HerdPage() {
   const setQuery = (v: string) => set({ q: v })
 
   const q = query.trim().toLowerCase()
-  const shownView = q ? 'list' : view
 
   const attnCats = useMemo(() => ACAT.map((c) => ({ ...c, list: list.filter((a) => a.cat === c.id) })).filter((c) => c.list.length), [list])
   const selCat = attnCats.find((c) => c.id === ac) ?? attnCats[0]
@@ -44,18 +43,33 @@ export default function HerdPage() {
     [list, stage, st, q],
   )
 
-  const penCards = useMemo(() => (pens.data ?? []).map((p) => {
-    const as = list.filter((a) => a.pen_id === p.id)
-    const cnt = new Map<StageGroup, number>()
-    as.forEach((a) => cnt.set(a.g, (cnt.get(a.g) ?? 0) + 1))
-    return { pen: p, as, cnt, pc: p.capacity ? (as.length / p.capacity) * 100 : 0, flag: penFlag(as), avg: avgOf(as), gid: penGroupId(p) }
-  }), [pens.data, list])
+  // Per pen: occupancy, alerts and the details shown inside the farm layout.
+  const [counts, alerts, info] = useMemo(() => {
+    const c = new Map<string, number>()
+    const at = new Map<string, number>()
+    const inf = new Map<string, PenInfo>()
+    for (const p of pens.data ?? []) {
+      const as = list.filter((a) => a.pen_id === p.id)
+      const cnt = new Map<StageGroup, number>()
+      as.forEach((a) => cnt.set(a.g, (cnt.get(a.g) ?? 0) + 1))
+      c.set(p.id, as.length)
+      at.set(p.id, as.filter((a) => a.attn).length)
+      const avg = avgOf(as)
+      inf.set(p.id, {
+        comp: [...cnt.entries()].map(([k, v]) => `${v} ${SGL[k].toLowerCase()}`).join(' · ') || 'Vazio',
+        flag: penFlag(as), avg: avg ? avgLabel(avg) : '', help: penHelp(p),
+      })
+    }
+    return [c, at, inf] as const
+  }, [pens.data, list])
 
   if (loading) return <Loading />
   if (error) return <ErrorState error={error} retry={refetch} />
 
   const filtered = stage !== 'all' || st !== 'all' || !!q
-  const toList = (s: StFilter, g: StageFilter = 'all') => set({ q: null, status: s === 'all' ? null : s, stage: g === 'all' ? null : g, view: 'list' })
+  // The animal list sits under the layout: filtering scrolls to it.
+  const toListView = () => requestAnimationFrame(() => document.getElementById('lista-animais')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  const toList = (s: StFilter, g: StageFilter = 'all') => { set({ q: null, status: s === 'all' ? null : s, stage: g === 'all' ? null : g }); toListView() }
   const listTitle = q ? `Resultados para “${query.trim()}”` : st === 'attn' ? 'Precisam de atenção' : st !== 'all' ? ACAT.find((c) => c.id === st)?.title ?? '' : stage === 'all' ? 'Todos os animais' : SGL[stage]
   const reps = list.filter((a) => a.g === 'rep').length
   const lei = list.filter((a) => a.g === 'lei').length
@@ -76,10 +90,10 @@ export default function HerdPage() {
         <>
           <KpiGrid>
             <Kpi label="Animais" value={list.length} sub={plural(pens.data!.length, 'curral', 'currais')} icon="pets" bg="#EEECFE" fg={ACC} />
-            <Kpi label="Reprodutoras" value={reps} sub="porcas e leitoas" icon="favorite" bg="#FCE7F3" fg="#B0306E" onClick={() => set({ stage: 'rep', view: 'list' })} />
-            <Kpi label="Leitões" value={lei} sub="em maternidade" icon="child_care" bg="#FDF1E2" fg="#A2601A" onClick={() => set({ stage: 'lei', view: 'list' })} />
+            <Kpi label="Reprodutoras" value={reps} sub="porcas e leitoas" icon="favorite" bg="#FCE7F3" fg="#B0306E" onClick={() => { set({ stage: 'rep' }); toListView() }} />
+            <Kpi label="Leitões" value={lei} sub="em maternidade" icon="child_care" bg="#FDF1E2" fg="#A2601A" onClick={() => { set({ stage: 'lei' }); toListView() }} />
             <Kpi label="Precisam de atenção" value={attnN} sub="saúde, tratamento ou carência" icon="error" bg="#FDECEA" fg="#C0302A"
-              valueColor={attnN ? RED : GREEN} active={st !== 'all'} onClick={() => set({ q: null, status: st === 'attn' ? null : 'attn', view: 'list' })} />
+              valueColor={attnN ? RED : GREEN} active={st !== 'all'} onClick={() => { set({ q: null, status: st === 'attn' ? null : 'attn' }); toListView() }} />
           </KpiGrid>
 
           {selCat && (
@@ -134,85 +148,36 @@ export default function HerdPage() {
             </Card>
           )}
 
-          <div className="flex flex-wrap items-center gap-2.5">
-            <SearchInput className="max-w-[380px] min-w-[220px] flex-1" value={query} onChange={setQuery} placeholder="Procurar brinco, fase ou curral" />
-            {filtered && (
-              <button type="button" onClick={() => set({ q: null, stage: null, status: null })} className="h-11 rounded-xl border-0 bg-transparent px-2.5 text-sm font-semibold text-accent-strong hover:bg-accent-tint">Limpar filtros</button>
-            )}
-            <div className="ml-auto">
-              <Segmented value={shownView} onChange={(v) => setUrlParams(q && v === 'pens' ? { q: null, view: null, page: null } : { view: v === 'pens' ? null : v })} options={[['pens', 'Currais'], ['list', 'Lista']] as const} />
+          <Card className="flex flex-col gap-3 p-[18px]">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="m-0 text-base font-semibold">Esquema da granja</h2>
+              <span className="text-[13px] text-muted">Toque num curral para o abrir</span>
             </div>
-          </div>
+            <PenLayout pens={pens.data ?? []} counts={counts} alerts={alerts} info={info} onOpen={(p) => nav(`/herd/pens/${p.id}`)} />
+          </Card>
 
-          <div className="no-scrollbar -mt-1.5 flex gap-2 overflow-x-auto">
-            {STAGE_KEYS.map((g) => {
-              const on = stage === g
-              const n = g === 'all' ? list.length : list.filter((a) => a.g === g).length
-              return (
-                <button key={g} type="button" onClick={() => setStage(g)}
-                  className={cx('flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-[13px] font-medium',
-                    on ? 'border-[#C9C2FB] bg-accent-soft text-accent-strong' : 'border-line-strong bg-white text-ink-2')}>
-                  {g !== 'all' && <span className="size-2 rounded-full" style={{ background: SGC[g] }} />}
-                  {SGL[g]}<span className="tabular opacity-65">{n}</span>
-                </button>
-              )
-            })}
-          </div>
-
-          {shownView === 'pens' ? (
-            <div className="flex flex-col gap-4">
-              {PEN_GROUPS.map((g) => {
-                const cards = penCards.filter((c) => c.gid === g.id)
-                if (!cards.length) return null
-                const n = cards.reduce((x, c) => x + c.as.length, 0)
-                const cap = cards.reduce((x, c) => x + c.pen.capacity, 0)
-                const at = cards.reduce((x, c) => x + c.as.filter((a) => a.attn).length, 0)
-                const groupOp = cards.some((c) => stage === 'all' || c.cnt.has(stage)) ? 1 : 0.5
+          <AnimalTable id="lista-animais" key={`${stage}|${st}|${q}`} title={listTitle} rows={homeList} thirdCol="pen" toolbar={<>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <SearchInput className="max-w-[380px] min-w-[220px] flex-1" value={query} onChange={setQuery} placeholder="Procurar brinco, fase ou curral" />
+              {filtered && (
+                <button type="button" onClick={() => set({ q: null, stage: null, status: null })} className="h-11 rounded-xl border-0 bg-transparent px-2.5 text-sm font-semibold text-accent-strong hover:bg-accent-tint">Limpar filtros</button>
+              )}
+            </div>
+            <div className="no-scrollbar flex gap-2 overflow-x-auto">
+              {STAGE_KEYS.map((g) => {
+                const on = stage === g
+                const n = g === 'all' ? list.length : list.filter((a) => a.g === g).length
                 return (
-                  <Card key={g.id} className="flex flex-col gap-3.5 p-[18px] transition-opacity" style={{ opacity: groupOp }}>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <IconTile icon={g.icon} bg={g.tint} fg={g.ink} size={40} iconSize={22} />
-                      <div className="min-w-[180px] flex-1">
-                        <h2 className="m-0 text-base font-semibold">{g.title}</h2>
-                        <div className="text-[13px] text-muted">{g.sub}</div>
-                      </div>
-                      <div className="flex flex-wrap gap-[18px] text-[13px]">
-                        {([['Animais', String(n), INK], ['Ocupação', `${Math.round(cap ? (n / cap) * 100 : 0)}%`, INK], ['Atenção', String(at), at ? RED : GREEN]] as const).map(([l, v, c]) => (
-                          <div key={l} className="flex flex-col items-end"><span className="text-muted">{l}</span><span className="tabular text-[15px] font-semibold" style={{ color: c }}>{v}</span></div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="grid gap-2.5 [grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr))]">
-                      {cards.map((c) => {
-                        const comp = [...c.cnt.entries()].map(([k, v]) => `${v} ${SGL[k].toLowerCase()}`).join(' · ') || 'Vazio'
-                        const dim = stage === 'all' || c.cnt.has(stage) ? 1 : 0.4
-                        return (
-                          <button key={c.pen.id} type="button" onClick={() => nav(`/herd/pens/${c.pen.id}`)} style={{ opacity: dim }}
-                            className="flex flex-col gap-2.5 rounded-2xl border border-line bg-[#FAFAFD] p-3.5 text-left text-ink transition-[border-color,background,transform] duration-200 hover:-translate-y-0.5 hover:border-[#C9C2FB] hover:bg-white active:scale-[0.98]">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0">
-                                <div className="font-semibold">{c.pen.name}</div>
-                                <div className="truncate text-xs text-muted">{comp}</div>
-                              </div>
-                              <span className="tabular whitespace-nowrap text-[13px]"><span className="text-base font-semibold">{c.as.length}</span><span className="text-muted"> / {c.pen.capacity}</span></span>
-                            </div>
-                            <Progress value={c.pc} height={5} color={c.pc >= 90 ? '#E8A23A' : ACC} />
-                            <div className="flex items-center justify-between gap-2 text-xs">
-                              <span className="flex min-w-0 items-center gap-1.5 truncate font-medium" style={{ color: c.flag.color }}><Icon name={c.flag.icon} size={14} />{c.flag.text}</span>
-                              <span className="tabular whitespace-nowrap text-muted">{c.avg ? avgLabel(c.avg) : '—'}</span>
-                            </div>
-                          </button>
-                        )
-                      })}
-                    </div>
-                    {g.help.length > 0 && <div className="-mx-1 -mt-1 -mb-1.5 flex flex-wrap gap-1">{g.help.map((h) => <HelpBtn key={h.to} h={h} size="sm" />)}</div>}
-                  </Card>
+                  <button key={g} type="button" onClick={() => setStage(g)}
+                    className={cx('flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-[13px] font-medium',
+                      on ? 'border-[#C9C2FB] bg-accent-soft text-accent-strong' : 'border-line-strong bg-white text-ink-2')}>
+                    {g !== 'all' && <span className="size-2 rounded-full" style={{ background: SGC[g] }} />}
+                    {SGL[g]}<span className="tabular opacity-65">{n}</span>
+                  </button>
                 )
               })}
             </div>
-          ) : (
-            <AnimalTable key={`${stage}|${st}|${q}`} title={listTitle} rows={homeList} thirdCol="pen" />
-          )}
+          </>} />
         </>
       )}
     </div>

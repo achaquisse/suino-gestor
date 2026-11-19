@@ -11,10 +11,11 @@ import { useAnimal, useAnimalEvents, useParam, useWeights, signedUrl } from '@/l
 import { addDays, ageLabel, dLong, dShort, dTimeline, daysBetween, mon3, plural } from '@/lib/format'
 import { CAT_HELP, art, isSow, nextEvent, parentTags, pb } from './lib'
 import { HelpBtn, useHerd } from './parts'
+import { AnimalPhotos } from './AnimalPhotos'
 
 const TLT: Record<'all' | 'health' | 'breeding' | 'task', string> = { all: 'Todos', health: 'Saúde', breeding: 'Reprodução', task: 'Maneio' }
-type Tab = 'resumo' | 'repro' | 'hist'
-const TABS: Tab[] = ['resumo', 'repro', 'hist']
+type Tab = 'resumo' | 'repro' | 'hist' | 'fotos'
+const TABS: Tab[] = ['resumo', 'repro', 'hist', 'fotos']
 
 const liveOf = (e: FarmEvent) => {
   const meta = e.meta as { [k: string]: Json | undefined } | null
@@ -65,7 +66,7 @@ export default function AnimalPage() {
   const idx = siblings.findIndex((a) => a.id === animal.id)
   const penName = ha?.penName ?? herd.pens.data?.find((p) => p.id === animal.pen_id)?.name ?? '—'
   const go = (i: number) => nav({ pathname: `/herd/animals/${encodeURIComponent(siblings[(i + siblings.length) % siblings.length].tag)}`, search: window.location.search })
-  const tabs: (readonly [Tab, string, string])[] = [['resumo', 'Resumo', 'badge'], ...(sow ? [['repro', 'Reprodução', 'favorite'] as const] : []), ['hist', 'Histórico', 'history']]
+  const tabs: (readonly [Tab, string, string])[] = [['resumo', 'Resumo', 'badge'], ...(sow ? [['repro', 'Reprodução', 'favorite'] as const] : []), ['hist', 'Histórico', 'history'], ['fotos', 'Fotos', 'photo_library']]
   const curTab = tabs.some((t) => t[0] === tab) ? tab : 'resumo'
   const histTabs = tabs.map(([v, l, i]) => [v, v === 'hist' && events.length ? `${l} · ${events.length}` : l, i] as const)
 
@@ -138,7 +139,7 @@ export default function AnimalPage() {
           <div className="relative size-[88px] shrink-0">
             <div className="absolute inset-0 overflow-hidden rounded-[20px] border border-line bg-[#F3F3F9]"><AnimalPhoto path={animal.photo_path} /></div>
             {canEditHerd && (
-              <button type="button" aria-label="Editar foto" title="Editar foto" onClick={() => openEditAnimal(animal.id)}
+              <button type="button" aria-label="Fotos" title="Fotos" onClick={() => setTab('fotos')}
                 className="absolute -right-1.5 -bottom-1.5 grid size-8 place-items-center rounded-full border-2 border-white bg-ink p-0 text-white shadow-[0_2px_8px_rgba(22,22,40,0.2)] hover:bg-accent-strong">
                 <Icon name="photo_camera" size={16} />
               </button>
@@ -276,6 +277,8 @@ export default function AnimalPage() {
           {kids.length > 0 && <Litter kids={kids.map((k) => k.tag)} />}
         </>
       )}
+
+      {curTab === 'fotos' && <AnimalPhotos animal={animal} />}
 
       {curTab === 'hist' && (
         <Card className="flex flex-col gap-3.5 p-5">

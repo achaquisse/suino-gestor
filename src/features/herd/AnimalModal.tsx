@@ -8,20 +8,40 @@ import type { Sex, Stage } from '@/lib/database.types'
 import { errorMessage, supabase } from '@/lib/supabase'
 import { signedUrl, storageSafeName, useAccounts, useAnimals, useBreeds, usePens, useRpc, useTableMutations, useTeamNames } from '@/lib/queries'
 import { dShort, numP, plural, todayISO, validDate } from '@/lib/format'
+import { freePlaces } from '@/lib/pens'
+import { RegisterAnimalsSheet } from './RegisterAnimalsSheet'
 
 type Props = { mode: 'buy' | 'edit'; animalId?: string; penId?: string; onClose: () => void }
 
 const TAG_RE = /^[A-Z0-9][A-Z0-9-]*$/
 
 export default function AnimalModal({ mode, animalId, penId, onClose }: Props) {
-  return mode === 'buy' ? <BuyForm penId={penId} onClose={onClose} /> : <EditForm animalId={animalId} onClose={onClose} />
+  return mode === 'buy' ? <AddAnimals penId={penId} onClose={onClose} /> : <EditForm animalId={animalId} onClose={onClose} />
+}
+
+type Origin = 'compra' | 'existente'
+
+/** "Adicionar animais": the user picks where the animals come from. A purchase also records the expense. */
+function AddAnimals({ penId, onClose }: { penId?: string; onClose: () => void }) {
+  const { isOwner } = useFarm()
+  // Only the owner records purchases (they are an expense).
+  const [origin, setOrigin] = useState<Origin>(isOwner ? 'compra' : 'existente')
+  const originSwitch = (
+    <Field label="Origem dos animais" className="mb-3.5">
+      <Segmented className="self-start" options={(isOwner ? [['compra', 'Compra'], ['existente', 'Já na granja']] : [['existente', 'Já na granja']]) as readonly (readonly [Origin, string])[]}
+        value={origin} onChange={setOrigin} />
+    </Field>
+  )
+  return origin === 'compra'
+    ? <BuyForm penId={penId} onClose={onClose} originSwitch={originSwitch} />
+    : <RegisterAnimalsSheet penId={penId} onClose={onClose} originSwitch={originSwitch} />
 }
 
 function Row({ children }: { children: ReactNode }) {
   return <div className="grid grid-cols-2 gap-3 max-[480px]:grid-cols-1">{children}</div>
 }
 
-function BuyForm({ penId, onClose }: { penId?: string; onClose: () => void }) {
+function BuyForm({ penId, onClose, originSwitch }: { penId?: string; onClose: () => void; originSwitch?: ReactNode }) {
   const nav = useNavigate()
   const toast = useToast()
   const { user, isOwner } = useFarm()
@@ -47,11 +67,13 @@ function BuyForm({ penId, onClose }: { penId?: string; onClose: () => void }) {
   const [error, setError] = useState<string | null>(null)
 
   const loading = pens.isPending || animals.isPending || accounts.isPending || breedsQ.isPending
-  const penList = pens.data ?? []
+  // Blocked ("vedado") pens take no animals.
+  const penList = (pens.data ?? []).filter((p) => !p.blocked)
   const free = (id: string) => {
     const p = penList.find((x) => x.id === id)
-    return p ? p.capacity - (animals.data ?? []).filter((a) => a.pen_id === id).length : 0
+    return p ? freePlaces(p, (animals.data ?? []).filter((a) => a.pen_id === id).length) : 0
   }
+  const freeLabel = (id: string) => (free(id) === Infinity ? 'sem limite' : plural(free(id), 'lugar livre', 'lugares livres'))
   const accs = accounts.data ?? []
   const accountId = account || accs[0]?.id || ''
   const penId2 = pen || penList[0]?.id || ''
@@ -64,7 +86,7 @@ function BuyForm({ penId, onClose }: { penId?: string; onClose: () => void }) {
     if (!Number.isSafeInteger(n) || n < 1) return setError('Indique uma quantidade inteira de animais maior que zero.')
     if (!penRow) return setError('Escolha o curral.')
     if (!breeds.some((b) => b.name === (breed || breeds[0]?.name))) return setError('Escolha uma raça activa nas definições.')
-    if (n > free(penId2)) return setError(`${penRow.name} só tem ${plural(free(penId2), 'lugar livre', 'lugares livres')}.`)
+    if (n > free(penId2)) return setError(`${penRow.name} só tem ${freeLabel(penId2)}.`)
     if (!(numP(kg) > 0)) return setError('Indique o peso médio.')
     if (!(total > 0)) return setError('Indique o valor total da compra.')
     if (!accs.some((a) => a.id === accountId && a.active)) return setError('Escolha uma conta de pagamento activa.')
@@ -86,9 +108,10 @@ function BuyForm({ penId, onClose }: { penId?: string; onClose: () => void }) {
   }
 
   return (
-    <Sheet open onClose={onClose} title="Registar compra de animais" maxWidth={560}
+    <Sheet open onClose={onClose} title="Adicionar animais" maxWidth={560}
       footer={isOwner && !loading ? <><Button className="flex-1" onClick={onClose}>Cancelar</Button><Button className="flex-[2]" variant="primary" loading={buy.isPending} onClick={save}>Registar compra</Button></> : undefined}>
-      <p className="m-0 mb-4 -mt-2 text-[13px] text-muted">Cria os animais no curral e lança a despesa</p>
+      {originSwitch}
+      <p className="m-0 mb-4 -mt-2 text-[13px] text-muted">Cria os animais no curral e lança a despesa de compra</p>
       {loading ? <Loading /> : !isOwner ? (
         <FormError>Apenas o proprietário pode registar compras de animais.</FormError>
       ) : !penList.length ? (
@@ -118,7 +141,7 @@ function BuyForm({ penId, onClose }: { penId?: string; onClose: () => void }) {
           </Row>
           <Field label="Curral">
             <Select value={penId2} onChange={(e) => setPen(e.target.value)}>
-              {penList.map((p) => <option key={p.id} value={p.id}>{p.name} · {plural(free(p.id), 'lugar livre', 'lugares livres')}</option>)}
+              {penList.map((p) => <option key={p.id} value={p.id}>{p.name} · {freeLabel(p.id)}</option>)}
             </Select>
           </Field>
           <Row>
@@ -138,7 +161,7 @@ function BuyForm({ penId, onClose }: { penId?: string; onClose: () => void }) {
             </Field>
           </Row>
           <div className="grid grid-cols-3 gap-2.5">
-            {[['Brincos a criar', n ? String(n) : '—'], ['Preço por animal', n && total ? `${Math.round(total / n)} MT` : '—'], ['Lugares livres', String(free(penId2))]].map(([l, v]) => (
+            {[['Brincos a criar', n ? String(n) : '—'], ['Preço por animal', n && total ? `${Math.round(total / n)} MT` : '—'], ['Lugares livres', free(penId2) === Infinity ? 'Sem limite' : String(free(penId2))]].map(([l, v]) => (
               <div key={l} className="flex flex-col gap-0.5 rounded-[14px] bg-[#F7F7FB] p-3"><span className="text-xs text-muted">{l}</span><span className="tabular font-semibold">{v}</span></div>
             ))}
           </div>
@@ -195,6 +218,9 @@ function EditForm({ animalId, onClose }: { animalId?: string; onClose: () => voi
         const path = `${farmId}/${animal.id}/${Date.now()}-${storageSafeName(file.name)}`
         const up = await supabase.storage.from('animal-photos').upload(path, file, { contentType: file.type })
         if (up.error) throw up.error
+        // Kept in the photo history (dated today); the most recent photo is the main one.
+        const { error: phErr } = await supabase.from('animal_photos').insert({ farm_id: farmId, animal_id: animal.id, path, taken_on: todayISO() })
+        if (phErr) throw phErr
         photo_path = path
       }
       await update.mutateAsync({ id: animal.id, tag, sex: f.sex, stage: f.stage, breed: f.breed, born_on: f.born, notes: f.notes.trim(), photo_path })

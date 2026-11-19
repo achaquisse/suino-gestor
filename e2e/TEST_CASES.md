@@ -45,6 +45,7 @@ Test data: the isolated demo farm created at bootstrap (same seed as `seed_demo`
 | HERD-06 | P1 | Open an animal | Open `/herd/animals/S-009` | Heading S-009, "Porca", "Dados do animal" |
 | HERD-07 | P3 | Unknown animal | Open `/herd/animals/NOPE-1` | "Animal não encontrado" |
 | HERD-08 | P3 | `@future` Export the herd list | Herd list view → "Exportar" | A CSV of the animals is downloaded |
+| HERD-09 | P2 | Farm layout | `/herd` → "Esquema da granja"; open Engorda A | "Localização na granja" with Engorda A highlighted |
 
 ## Quick log (field events) — `features/quicklog.feature`
 
@@ -71,10 +72,14 @@ Test data: the isolated demo farm created at bootstrap (same seed as `seed_demo`
 
 | ID | P | Title | Steps | Expected result |
 | --- | --- | --- | --- | --- |
-| ANI-01 | P1 | Buy animals into a pen | Pen Gestação → note occupancy → Comprar → 2 Leitoa, 120 kg, 30000 MT | Toast "2 animais registados · Gestação"; occupancy grows by 2 |
+| ANI-01 | P1 | Buy animals into a pen | Pen Gestação → note occupancy → Adicionar animais (origem Compra) → 2 Leitoa, 120 kg, 30000 MT | Toast "2 animais registados · Gestação"; occupancy grows by 2 |
 | ANI-02 | P2 | Buying over capacity is refused | Pen Varrasco (1/2) → Comprar 5 | Error "Varrasco só tem 1 lugar livre." |
 | ANI-03 | P2 | Edit animal notes | G-102 → Editar → Notas → Guardar alterações | Toast "Animal actualizado"; notes shown under "Dados do animal" |
 | ANI-04 | P2 | Duplicate ear tag is refused | G-106 → Editar → Brinco "G-107" | Error "O brinco G-107 já existe." |
+| ANI-05 | P1 | Register existing animals | Engorda B → Adicionar animais → origem Já na granja → E2E-701, Macho, Engorda, 64 kg → Registar 1 animal | "1 animal registado · Engorda B"; occupancy +1 |
+| ANI-06 | P2 | Dated animal photo | G-104 → Fotos → add photo, date 2026-10-05 → Guardar foto | "Foto adicionada"; listed as "5 Out 2026" |
+| ANI-07 | P1 | Transfer chosen animals | Recria → Transferir → Guardar without choosing → pick G-112 → Engorda B | Error "Seleccione os animais a transferir.", then "Transferência registada · G-112 → Engorda B" |
+| LOG-17 | P2 | Pen treatment needs a choice | Engorda A → Tratar curral → Guardar → Seleccionar todos | Error "Seleccione pelo menos um animal.", then "12 seleccionados" |
 
 ## Expenses (Despesas) — `features/money.feature`
 
@@ -126,12 +131,14 @@ Test data: the isolated demo farm created at bootstrap (same seed as `seed_demo`
 
 | ID | P | Title | Steps | Expected result |
 | --- | --- | --- | --- | --- |
-| SET-01 | P1 | Owner settings tabs | Owner opens `/settings` | Tabs Geral, Contas, Parâmetros (cost types and catalogs live in the admin area) |
+| SET-01 | P1 | Owner settings tabs | Owner opens `/settings` | Tabs Geral, Currais, Contas, Parâmetros (cost types and catalogs live in the admin area) |
 | SET-02 | P1 | Caretaker settings tabs | Caretaker opens `/settings` | No Contas or Tipos de custo tab (cost types live in the admin area) |
 | SET-03 | P2 | Create a funding account | Contas → Nova conta → name → Guardar | Toast "Conta criada"; the account is listed |
 | SET-04 | P2 | Invite with an invalid email | Geral → Equipa → Convidar → bad email | "Indique o nome e um email válido." |
 | SET-05 | P2 | Invite a team member | Convidar → name, email, role → Convidar | Toast "Convite enviado a …" |
+| SET-06 | P1 | Register a pen | Currais → Novo curral → name, Quarentena, Vedado + motivo → Guardar | "Curral criado"; listed as "Quarentena · Obras" with the Vedado chip |
+| SET-07 | P2 | Caretaker pen layout is read-only | Caretaker opens Currais | Layout shown; no "Novo curral" |
 
-**Totals:** 71 cases: 67 core, 4 `@future` (NAV-06, HERD-08, LOG-04, LOG-15).
+**Totals:** 78 cases: 74 core, 4 `@future` (NAV-06, HERD-08, LOG-04, LOG-15).
 
 Counts that other scenarios change (herd size, pen occupancy) are asserted either as a before/after change or against the database. This keeps scenarios independent of execution order.

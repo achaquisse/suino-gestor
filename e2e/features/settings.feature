@@ -11,6 +11,7 @@ Feature: Settings
     Then I should see the tabs:
       | tab            |
       | Geral          |
+      | Currais        |
       | Contas         |
       | Parâmetros     |
 
@@ -56,3 +57,25 @@ Feature: Settings
     And I select "Veterinário" in "Função"
     And I submit the sheet with "Convidar"
     Then I should see the toast "Convite enviado a Rita Vet"
+
+  @mutation @SET-06
+  Scenario: Register a pen with a role, no capacity limit and closed for use
+    Given I am signed in as the owner
+    When I open "/settings?tab=currais"
+    Then I should see "Esquema dos currais"
+    When I click the button "Novo curral"
+    And I fill "Nome" with "Curral E2E"
+    And I select "Quarentena" in "Função"
+    And I switch on "Vedado"
+    And I fill "Motivo" with "Obras"
+    And I submit the sheet with "Guardar"
+    Then I should see the toast "Curral criado"
+    And I should see "Curral E2E"
+    And I should see "Quarentena · Obras"
+
+  @rbac @SET-07
+  Scenario: The caretaker sees the pen layout but cannot change it
+    Given I am signed in as the caretaker
+    When I open "/settings?tab=currais"
+    Then I should see "Esquema dos currais"
+    But I should not see the button "Novo curral"

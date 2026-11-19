@@ -39,7 +39,8 @@ Then('I should see the animal {string} in the list', async (tag) => {
 When('I open the pen {string}', async (name) => {
   if (!(await I.grabCurrentUrl()).match(/\/herd(\?|$)/)) I.amOnPage('/herd')
   await pw(`open pen ${name}`, async ({ page }) => {
-    const card = page.locator(`xpath=//button[.//div[normalize-space(text())=${xq(name)}]]`).first()
+    // Pens are opened from the farm layout (rectangles labelled "<name> · <role> ...").
+    const card = page.locator(`[role="button"][aria-label^="${name} ·"]`).first()
     await waitVisible(card, `pen card "${name}"`)
     await card.click()
     await waitVisible(page.getByRole('heading', { level: 1, name, exact: true }), `pen page "${name}"`)
@@ -98,5 +99,26 @@ Then('the animal list count should equal the herd KPI {string}', async (label) =
     const n = firstInt((await kpi.textContent()) ?? '')
     const want = n === 1 ? '1 animal' : `${n} animais`
     await waitVisible(page.locator(`xpath=//h2/following-sibling::span[normalize-space()=${xq(want)}]`).first(), `list count "${want}"`)
+  })
+})
+
+Then('the layout should highlight the pen {string}', async (name) => {
+  await pw('highlighted pen', async ({ page }) => {
+    await waitVisible(page.locator(`[aria-current="true"][aria-label^="${name} ·"]`).first(), `"${name}" highlighted in the layout`)
+  })
+})
+
+// A tiny generated PNG, so the scenario needs no fixture file.
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
+When('I add the photo {string}', async (name) => {
+  await pw(`photo ${name}`, async ({ page }) => {
+    await page.locator('input[type="file"][accept="image/*"]').first().setInputFiles({ name, mimeType: 'image/png', buffer: PNG })
+    await waitVisible(page.getByRole('heading', { name: 'Adicionar foto', exact: true }), 'the add photo sheet')
+  })
+})
+
+When('I pick the animal {string} in the sheet', async (label) => {
+  await pw(`pick ${label}`, async ({ page }) => {
+    await page.getByRole('dialog').getByRole('button', { name: new RegExp(`^(check |add )?${label}`) }).first().click()
   })
 })

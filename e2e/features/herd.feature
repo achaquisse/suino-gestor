@@ -55,3 +55,11 @@ Feature: Herd overview
     When I open "/herd?view=list"
     And I download the file from the button "Exportar"
     Then the downloaded file name should end with ".csv"
+
+  @HERD-09
+  Scenario: The pens view shows the farm layout and the pen page highlights its pen
+    When I open "/herd"
+    Then I should see "Esquema da granja"
+    When I open the pen "Engorda A"
+    Then I should see "Localização na granja"
+    And the layout should highlight the pen "Engorda A"

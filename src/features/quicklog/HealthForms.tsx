@@ -1,11 +1,11 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useRpc, useStock, useSymptoms, useTreatmentProducts } from '@/lib/queries'
 import { dShort, addDays, dec, numP, plural } from '@/lib/format'
 import { Button, Field, Icon, Input, Segmented, Select, Textarea, Toggle, cx } from '@/ui'
 import { qf, qtyLabel } from '@/features/stock/model'
 import {
-  AnimalSelect, CommonFields, FormSheet, LockedAnimal, firstId, scoped, useBase, useCommon, useSubmit, type FormProps,
+  AnimalSelect, Chipper, CommonFields, FormSheet, LockedAnimal, firstId, scoped, useBase, useCommon, useSubmit, type FormProps,
 } from './shared'
 
 export function TreatmentForm({ ctx, onBack, onClose }: FormProps) {
@@ -21,8 +21,8 @@ export function TreatmentForm({ ctx, onBack, onClose }: FormProps) {
   const ctxAnimal = ctx.animalId ? animals.find((a) => a.id === ctx.animalId) : undefined
   const initialPen = ctxAnimal?.pen_id ?? ctx.penId ?? pens.find((p) => count(p.id) > 0)?.id ?? pens[0]?.id ?? ''
   const [pen, setPen] = useState(initialPen)
-  const [sel, setSel] = useState<string[]>(() =>
-    ctxAnimal ? [ctxAnimal.id] : animals.filter((a) => a.pen_id === initialPen).map((a) => a.id))
+  // The animals treated must be chosen explicitly ("Todos" selects the whole pen).
+  const [sel, setSel] = useState<string[]>(() => (ctxAnimal ? [ctxAnimal.id] : []))
   const [productId, setProductId] = useState(ctx.product ?? '')
   const P = products.find((p) => p.code === productId) ?? products[0]
   const penAnimals = animals.filter((a) => a.pen_id === pen)
@@ -62,11 +62,11 @@ export function TreatmentForm({ ctx, onBack, onClose }: FormProps) {
             <span className="text-[13px] font-semibold text-ink-2">Animais</span>
             <span className="text-[13px] font-semibold text-accent-strong">{plural(chosen.length, 'seleccionado', 'seleccionados')}</span>
           </div>
-          <Select value={pen} onChange={(e) => { setPen(e.target.value); setSel(animals.filter((a) => a.pen_id === e.target.value).map((a) => a.id)) }}>
+          <Select value={pen} onChange={(e) => { setPen(e.target.value); setSel([]) }}>
             {pens.map((p) => <option key={p.id} value={p.id}>{p.name} · {plural(count(p.id), 'animal', 'animais')}</option>)}
           </Select>
           <div className="no-scrollbar flex max-h-[172px] flex-wrap gap-1.5 overflow-auto p-0.5">
-            <Chipper on={allOn} icon={allOn ? 'check' : 'add'} onClick={() => setSel(allOn ? [] : penAnimals.map((a) => a.id))}>Todos · {penAnimals.length}</Chipper>
+            <Chipper on={allOn} icon={allOn ? 'check' : 'add'} onClick={() => setSel(allOn ? [] : penAnimals.map((a) => a.id))}>Seleccionar todos · {penAnimals.length}</Chipper>
             {penAnimals.map((a) => (
               <Chipper key={a.id} on={sel.includes(a.id)} icon={sel.includes(a.id) ? 'check' : undefined} onClick={() => toggle(a.id)} title={`${a.stage} · ${a.status}`} tab>{a.tag}</Chipper>
             ))}
@@ -103,15 +103,6 @@ export function TreatmentForm({ ctx, onBack, onClose }: FormProps) {
   )
 }
 
-function Chipper({ on, icon, onClick, children, title, tab }: { on: boolean; icon?: string; onClick: () => void; children: ReactNode; title?: string; tab?: boolean }) {
-  return (
-    <button type="button" title={title} aria-pressed={on} onClick={onClick}
-      className={cx('flex h-9 items-center gap-1 rounded-full border-[1.5px] px-3 text-[13px] font-semibold', tab && 'tabular',
-        on ? 'border-accent bg-accent-wash text-accent-strong' : 'border-line-strong bg-white text-ink-2')}>
-      {icon && <Icon name={icon} size={14} />}{children}
-    </button>
-  )
-}
 
 const SEVERITIES = [['Ligeira', 'Ligeira'], ['Moderada', 'Moderada'], ['Grave', 'Grave']] as const
 

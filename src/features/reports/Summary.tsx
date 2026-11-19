@@ -29,14 +29,23 @@ export function KpiStrip({ s }: { s: Statement }) {
 
 export function Waterfall({ s }: { s: Statement }) {
   const { revenue: Rv, direct: D, gross: G, opex: O, net: N } = s
-  const mx = Math.max(1, Rv, D)
-  const H = (v: number) => `${(Math.abs(v) / mx) * 100}%`
+  // Waterfall levels: 0 → revenue → gross (after investment costs) → net (after opex).
+  // Each bar spans [lo, hi] on one scale covering every level, so nothing leaves the card and
+  // negative results sit below the zero line.
+  const lo = Math.min(0, G, N)
+  const hi = Math.max(0, Rv, G)
+  const range = Math.max(1, hi - lo)
+  const span = (a: number, b: number) => ({ b: `${((Math.min(a, b) - lo) / range) * 100}%`, h: `${(Math.abs(b - a) / range) * 100}%` })
+  // Keep the zero line inside the plot even when it sits at the very top.
+  const zero = `min(${((0 - lo) / range) * 100}%, calc(100% - 1px))`
+  const cost = (v: number) => (v ? `−${fmt(v)}` : '0')
+  const signed = (v: number) => (v ? sgn(v) : '0')
   const bars = [
-    { l: 'Receita', val: fmt(Rv), b: '0%', h: H(Rv), bg: GRAD, vc: INK },
-    { l: 'Custos de investimento', val: `−${fmt(D)}`, b: H(Math.max(G, 0)), h: H(Math.min(D, Rv) || D), bg: '#F7C6C0', vc: RED },
-    { l: 'Lucro bruto', val: fmt(G), b: '0%', h: H(G), bg: G < 0 ? '#F7C6C0' : '#8FE0B5', vc: G < 0 ? RED : INK },
-    { l: 'Despesas op.', val: `−${fmt(O)}`, b: H(Math.max(N, 0)), h: H(G > 0 ? Math.min(O, G) : O), bg: '#F7C6C0', vc: RED },
-    { l: 'Resultado', val: sgn(N), b: '0%', h: H(N), bg: N < 0 ? 'linear-gradient(180deg,#F08A80,#D0342C)' : 'linear-gradient(180deg,#4FD394,#15A05A)', vc: N < 0 ? RED : GREEN },
+    { l: 'Receita', val: fmt(Rv), ...span(0, Rv), bg: GRAD, vc: INK },
+    { l: 'Custos de investimento', val: cost(D), ...span(Rv, G), bg: '#F7C6C0', vc: RED },
+    { l: 'Lucro bruto', val: signed(G), ...span(0, G), bg: G < 0 ? '#F7C6C0' : '#8FE0B5', vc: G < 0 ? RED : INK },
+    { l: 'Despesas op.', val: cost(O), ...span(G, N), bg: '#F7C6C0', vc: RED },
+    { l: 'Resultado', val: signed(N), ...span(0, N), bg: N < 0 ? 'linear-gradient(180deg,#F08A80,#D0342C)' : 'linear-gradient(180deg,#4FD394,#15A05A)', vc: N < 0 ? RED : GREEN },
   ]
   return (
     <Card className="flex flex-col gap-[18px] p-5">
@@ -44,11 +53,13 @@ export function Waterfall({ s }: { s: Statement }) {
         <h2 className="m-0 text-[15px] font-semibold">Demonstração de resultados</h2>
         <div className="text-[13px] text-muted">Da receita ao resultado líquido · investimento em infra-estrutura {fmt(s.infra)} MT</div>
       </div>
-      <div className="flex h-[220px] items-end gap-2.5">
+      <div className="flex h-[220px] items-end gap-2.5" role="img" aria-label={`Receita ${fmt(Rv)} MT, custos de investimento ${fmt(D)} MT, lucro bruto ${sgn(G)} MT, despesas operacionais ${fmt(O)} MT, resultado ${sgn(N)} MT`}>
         {bars.map((w) => (
           <div key={w.l} className="flex h-full min-w-0 flex-1 flex-col items-center gap-1.5">
-              <div className="relative w-full flex-1">
-                <div className="absolute right-[15%] left-[15%] rounded-md transition-[height,bottom] duration-700 ease-pf" style={{ bottom: w.b, height: w.h, background: w.bg }} />
+              <div className="relative w-full flex-1 overflow-hidden">
+                {lo < 0 && <div className="absolute inset-x-0 h-px bg-line-strong" style={{ bottom: zero }} aria-hidden />}
+                <div className="absolute right-[15%] left-[15%] rounded-[4px] transition-[height,bottom] duration-700 ease-pf"
+                  style={{ bottom: w.b, height: w.h, minHeight: w.h === '0%' ? 0 : 2, background: w.bg }} />
               </div>
               <span className="tabular whitespace-nowrap text-[11px] font-semibold sm:text-xs" style={{ color: w.vc }}>{w.val}</span>
               <span className="min-h-7 text-center text-[11px] text-muted">{w.l}</span>

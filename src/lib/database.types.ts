@@ -13,7 +13,7 @@ export type ParamGroup = 'Reprodução' | 'Crescimento' | 'Vendas' | 'Stock' | '
 export type Split = { account_id: string; pct: number }
 export type MemberPrefs = { lang?: string; notif?: { tasks?: boolean; stock?: boolean; weekly?: boolean } }
 
-export type Profile = { id: string; full_name: string; email: string; avatar_url: string | null; created_at: string }
+export type Profile = { id: string; full_name: string; email: string; avatar_url: string | null; created_at: string; disabled_at: string | null }
 export type Farm = { id: string; name: string; currency: string; units: string; created_by: string | null; created_at: string }
 export type AdminFarm = {
   id: string; name: string; created_at: string; created_by_name: string
@@ -21,11 +21,31 @@ export type AdminFarm = {
 }
 export type AdminUser = {
   id: string; name: string; email: string; created_at: string; last_sign_in_at: string | null
-  is_super_admin: boolean; farms: { farm_id: string; name: string; role: Role }[]
+  is_super_admin: boolean; disabled_at: string | null; farms: { farm_id: string; name: string; role: Role }[]
 }
+export type AuditAction = 'insert' | 'update' | 'delete'
+/** One change made by a user (activity log). `changes`: the row for insert/delete, {column: [old, new]} for update. */
+export type AuditEntry = {
+  id: number; at: string; farm_id: string | null; farm_name: string; action: AuditAction
+  entity: string; row_id: string | null; label: string; changes: { [key: string]: Json | undefined }
+}
+export type AuditLogRow = AuditEntry & { user_id: string | null; user_email: string; user_name: string }
 export type FarmMember = { farm_id: string; user_id: string; role: Role; display_name: string; prefs: MemberPrefs; created_at: string }
 export type FarmInvite = { id: string; farm_id: string; email: string; name: string; role: Role; invited_by: string | null; accepted_at: string | null; created_at: string }
-export type Pen = { id: string; farm_id: string; name: string; kind: string; capacity: number; sort: number; created_at: string }
+export type PenRole = 'maternidade' | 'gestacao' | 'creche' | 'recria' | 'engorda' | 'varrasco' | 'quarentena' | 'enfermaria' | 'outro'
+export type Pen = {
+  id: string; farm_id: string; name: string; kind: string
+  /** Optional: null means no limit. */
+  capacity: number | null
+  sort: number; created_at: string
+  role: PenRole
+  /** Overrides of the role's colour/icon. */
+  color: string | null; icon: string | null
+  /** Place and size on the farm layout, in grid units. */
+  x: number; y: number; w: number; h: number
+  /** "Vedado": not available for use; takes no animals. */
+  blocked: boolean; blocked_reason: string
+}
 export type Animal = {
   id: string; farm_id: string; tag: string; pen_id: string | null; sex: Sex; stage: Stage; breed: string; born_on: string | null
   weight_kg: number; status: string; tone: Tone; parents: string; notes: string; photo_path: string | null
@@ -34,6 +54,9 @@ export type Animal = {
 export type FarmEvent = {
   id: string; farm_id: string; event_date: string; kind: EventKind; title: string; detail: string; animal_id: string | null
   pen_id: string | null; meta: Json; show_in_calendar: boolean; created_by: string | null; created_by_name: string; created_at: string
+}
+export type AnimalPhoto = {
+  id: string; farm_id: string; animal_id: string; path: string; taken_on: string; note: string; created_by: string | null; created_at: string
 }
 export type Weight = { id: string; farm_id: string; animal_id: string; measured_on: string; kg: number; created_at: string }
 export type Task = {
@@ -111,14 +134,16 @@ type By = { p_date?: string; p_by?: string }
 export type Database = {
   public: {
     Tables: {
-      profiles: Table<Profile, 'full_name' | 'email' | 'avatar_url'>
+      profiles: Table<Profile, 'full_name' | 'email' | 'avatar_url' | 'disabled_at'>
+      audit_log: Table<AuditLogRow, 'id' | 'at' | 'user_id' | 'user_email' | 'user_name' | 'farm_id' | 'farm_name' | 'row_id' | 'label' | 'changes'>
       farms: Table<Farm, 'currency' | 'units' | 'created_by'>
       farm_members: Table<FarmMember, 'display_name' | 'prefs'>
       farm_invites: Table<FarmInvite, 'name' | 'invited_by' | 'accepted_at'>
-      pens: Table<Pen, 'kind' | 'capacity' | 'sort'>
+      pens: Table<Pen, 'kind' | 'capacity' | 'sort' | 'role' | 'color' | 'icon' | 'x' | 'y' | 'w' | 'h' | 'blocked' | 'blocked_reason'>
       animals: Table<Animal, 'pen_id' | 'sex' | 'breed' | 'born_on' | 'weight_kg' | 'status' | 'tone' | 'parents' | 'notes' | 'photo_path' | 'withdrawal_until' | 'removed_at' | 'removed_reason'>
       events: Table<FarmEvent, 'detail' | 'animal_id' | 'pen_id' | 'meta' | 'show_in_calendar' | 'created_by' | 'created_by_name'>
       weights: Table<Weight>
+      animal_photos: Table<AnimalPhoto, 'taken_on' | 'note' | 'created_by'>
       tasks: Table<Task, 'location' | 'pen_id' | 'due_time' | 'assignee' | 'action' | 'done_at' | 'done_by'>
       notification_resolutions: Table<NotificationResolution, 'resolved_at'>
       stock_items: Table<StockItem, 'code' | 'unit' | 'unit_singular' | 'shelf_life_days' | 'qty' | 'max_qty' | 'low_qty' | 'note' | 'expires_on' | 'category' | 'unit_price' | 'active'>
@@ -146,12 +171,16 @@ export type Database = {
       admin_create_farm: Fn<{ p_name: string; p_owner_email?: string | null; p_demo?: boolean }, string>
       admin_farms: Fn<Record<string, never>, AdminFarm[]>
       admin_users: Fn<Record<string, never>, AdminUser[]>
+      admin_set_user_active: Fn<{ p_user: string; p_active: boolean }, undefined>
+      admin_delete_user: Fn<{ p_user: string }, undefined>
+      admin_user_activity: Fn<{ p_user: string; p_query?: string; p_action?: AuditAction | null; p_entity?: string | null; p_sort?: 'new' | 'old' | 'entity'; p_offset?: number; p_limit?: number }, (AuditEntry & { total: number })[]>
       accept_invites: Fn<Record<string, never>, number>
       update_my_membership: Fn<{ p_farm: string; p_prefs?: Json; p_display_name?: string }, undefined>
       log_treatment: Fn<{ p_farm: string; p_animal_ids: string[]; p_product: string; p_product_name: string; p_withdrawal_days?: number; p_stock_code?: string } & By, number>
       log_illness: Fn<{ p_farm: string; p_animal: string; p_symptoms: string[]; p_severity?: string; p_isolate?: boolean; p_notes?: string } & By, undefined>
+      register_animals: Fn<{ p_farm: string; p_pen: string; p_animals: Json } & By, string[]>
       log_weight: Fn<{ p_farm: string; p_animal: string; p_kg: number } & By, undefined>
-      log_transfer: Fn<{ p_farm: string; p_animal: string | null; p_from: string | null; p_to: string } & By, number>
+      log_transfer: Fn<{ p_farm: string; p_animal: string | null; p_from: string | null; p_to: string; p_animals?: string[] | null } & By, number>
       log_birth: Fn<{ p_farm: string; p_sow: string; p_live: number; p_dead?: number } & By, number>
       log_mating: Fn<{ p_farm: string; p_sow: string; p_method?: string; p_boar?: string } & By, string>
       log_death: Fn<{ p_farm: string; p_animal: string; p_cause?: string } & By, undefined>

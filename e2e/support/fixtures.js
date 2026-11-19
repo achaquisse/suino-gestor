@@ -20,6 +20,8 @@ export async function setup() {
     caretaker: { name: 'Tomás Tratador', role: 'caretaker' },
     investor: { name: 'Inês Investidora', role: 'investor' },
     newcomer: { name: 'Nuno Novo', role: null },
+    // Disposable account for the admin user-management scenarios (disabled, then removed).
+    spare: { name: 'Sara Sobra', role: null },
     // Platform super admin, registered with source 'e2e' so `npm run admin:sync` and the
     // developer's own SUPER_ADMIN_EMAIL are left untouched.
     admin: { name: 'Ana Admin', role: null },
@@ -74,7 +76,8 @@ export async function teardown() {
   if (fErr) console.warn(`  E2E teardown: farms not deleted: ${fErr.message}`)
   for (const id of ids) {
     const { error } = await admin.auth.admin.deleteUser(id)
-    if (error) console.warn(`  E2E teardown: user ${id} not deleted: ${error.message}`)
+    // The spare account is removed by the admin scenarios themselves.
+    if (error && !/not found/i.test(error.message)) console.warn(`  E2E teardown: user ${id} not deleted: ${error.message}`)
   }
   rmSync(STATE_FILE, { force: true })
   console.log(`  E2E fixtures removed (run ${state.run})`)

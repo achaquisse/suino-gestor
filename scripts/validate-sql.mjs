@@ -177,6 +177,98 @@ await q(`select public.move_stock($1, $2, 'in', 2, 'Compra', '', current_date - 
 const [exp] = await q(`select expires_on, current_date + 27 as expected from stock_items where id = $1`, [autoId]);
 assert.equal(String(exp.expires_on), String(exp.expected), 'expires 30 days after the purchase date');
 console.log('stock item units: ok');
+
+// Users: deactivate / reactivate / remove (20261119000900) and the activity log (20261119001000).
+const spareUid = '55555555-5555-5555-5555-555555555555';
+const asSpare = `reset role; set request.jwt.claim.sub = '${spareUid}'; set request.jwt.claim.email = 'spare@example.com'; set role authenticated;`;
+await db.exec(`reset role; insert into auth.users (id, email, raw_user_meta_data) values ('${spareUid}', 'spare@example.com', '{"full_name":"Sara Sobra"}');
+  insert into public.farm_members (farm_id, user_id, role, display_name) values ('${farm}', '${spareUid}', 'caretaker', 'Sara');
+  insert into auth.sessions (user_id) values ('${spareUid}');`);
+await db.exec(asSpare);
+assert.equal((await q(`select public.is_member($1) as v`, [farm]))[0].v, true);
+await q(`insert into pens (farm_id, name) values ($1, 'Curral da Sara')`, [farm]);
+await assert.rejects(q(`update profiles set disabled_at = now() where id = $1`, [spareUid]), /administrador/);
+await assert.rejects(q(`select public.admin_set_user_active($1, false)`, [uid]), /administrador/);
+assert.equal(Number((await q(`select count(*) from audit_log`))[0].count), 0, 'members cannot read the log');
+await db.exec(asAdmin);
+await assert.rejects(q(`select public.admin_set_user_active($1, false)`, [adminUid]), /própria/);
+await q(`select public.admin_set_user_active($1, false)`, [spareUid]);
+await db.exec(`reset role;`);
+const [banned] = await q(`select banned_until is not null as banned, (select count(*) from auth.sessions where user_id = $1) as sessions from auth.users where id = $1`, [spareUid]);
+assert.deepEqual({ banned: banned.banned, sessions: Number(banned.sessions) }, { banned: true, sessions: 0 });
+await db.exec(asSpare);
+assert.equal((await q(`select public.is_member($1) as v`, [farm]))[0].v, false, 'a deactivated account loses access at once');
+assert.equal(Number((await q(`select count(*) from pens where farm_id = $1`, [farm]))[0].count), 0);
+await db.exec(asAdmin);
+assert.ok((await q(`select disabled_at from public.admin_users() where id = $1`, [spareUid]))[0].disabled_at);
+await q(`select public.admin_set_user_active($1, true)`, [spareUid]);
+await db.exec(asSpare);
+assert.equal((await q(`select public.is_member($1) as v`, [farm]))[0].v, true, 'reactivated');
+await db.exec(asAdmin);
+const activity = await q(`select action, entity, label, farm_name from public.admin_user_activity($1)`, [spareUid]);
+assert.ok(activity.some((a) => a.action === 'insert' && a.entity === 'pens' && a.label === 'Curral da Sara' && a.farm_name === 'Granja Boane'), JSON.stringify(activity));
+assert.ok((await q(`select count(*) from public.admin_user_activity($1) where entity = 'profiles'`, [adminUid]))[0].count > 0, "the admin's own actions are logged too");
+const found = await q(`select label, total from public.admin_user_activity($1, 'curral da sara')`, [spareUid]);
+assert.deepEqual(found.map((r) => [r.label, Number(r.total)]), [['Curral da Sara', 1]], 'search is case-insensitive');
+assert.equal((await q(`select count(*) from public.admin_user_activity($1, '', 'delete')`, [spareUid]))[0].count, 0, 'filter by operation');
+assert.equal((await q(`select count(*) from public.admin_user_activity($1, '', null, 'pens')`, [spareUid]))[0].count, 1, 'filter by record type');
+assert.equal((await q(`select count(*) from public.admin_user_activity($1, '100%')`, [spareUid]))[0].count, 0, 'wildcards are literal');
+const newest = await q(`select id from public.admin_user_activity($1, '', null, null, 'new', 0, 100)`, [adminUid]);
+const oldest = await q(`select id from public.admin_user_activity($1, '', null, null, 'old', 0, 100)`, [adminUid]);
+assert.ok(newest.length > 1 && Number(newest[0].id) > Number(newest.at(-1).id) && Number(oldest[0].id) < Number(oldest.at(-1).id), 'sorting');
+const page2 = await q(`select id, total from public.admin_user_activity($1, '', null, null, 'new', 1, 1)`, [adminUid]);
+assert.equal(Number(page2[0].id), Number(newest[1].id), 'offset paging');
+assert.equal(Number(page2[0].total), newest.length, 'total counts every match');
+await assert.rejects(q(`select public.admin_delete_user($1)`, [uid]), /único proprietário/);
+await q(`select public.admin_delete_user($1)`, [spareUid]);
+assert.equal(Number((await q(`select count(*) from farm_members where user_id = $1`, [spareUid]))[0].count), 0);
+assert.ok(Number((await q(`select count(*) from audit_log where user_id = $1`, [spareUid]))[0].count) > 0, 'the log outlives the account');
+await db.exec(asOwner);
+console.log('users and activity log: ok');
+
+// Pen layout, roles, optional capacity and blocked pens (20261119001100).
+const pens = await q(`select name, role, x, y, w, h from pens where farm_id = $1 order by sort`, [farm]);
+assert.equal(pens.find((p) => p.name === 'Maternidade A').role, 'maternidade');
+assert.equal(pens.find((p) => p.name === 'Engorda B').role, 'engorda');
+assert.equal(new Set(pens.map((p) => `${p.x},${p.y}`)).size, pens.length, 'existing pens get distinct places');
+const [freePen] = await q(`insert into pens (farm_id, name, capacity) values ($1, 'Curral sem limite', null) returning id, x, y, w, h`, [farm]);
+assert.ok(pens.every((p) => !(p.x < freePen.x + freePen.w && freePen.x < p.x + p.w && p.y < freePen.y + freePen.h && freePen.y < p.y + p.h)), 'a new pen does not overlap the others');
+const someAnimal = (await q(`select id, pen_id from animals where farm_id = $1 and removed_at is null and stage = 'Engorda' limit 1`, [farm]))[0];
+await q(`select public.log_transfer($1, $2, null, $3)`, [farm, someAnimal.id, freePen.id]);
+await q(`update pens set blocked = true, blocked_reason = 'Obras' where id = $1`, [someAnimal.pen_id]);
+await assert.rejects(q(`select public.log_transfer($1, $2, null, $3)`, [farm, someAnimal.id, someAnimal.pen_id]), /vedado/);
+await assert.rejects(q(`select public.buy_animals($1, 1, 'Engorda', 'Macho', 'Large White', 60, $2, null, '', 1000, $3)`, [farm, someAnimal.pen_id, acct]), /vedado/);
+await q(`update pens set blocked = false where id = $1`, [someAnimal.pen_id]);
+console.log('pens: ok');
+
+// Existing animals and photos (20261119001200).
+const regPen = (await q(`select id from pens where farm_id = $1 and name = 'Curral sem limite'`, [farm]))[0].id;
+const tags = (await q(`select public.register_animals($1, $2, $3::jsonb) as t`, [farm, regPen,
+  JSON.stringify([{ tag: 'e-901', sex: 'Fêmea', stage: 'Porca', breed: 'Landrace', weight_kg: 180 }, { tag: 'E-902', sex: 'Macho', stage: 'Engorda' }])]))[0].t;
+assert.deepEqual(tags, ['E-901', 'E-902']);
+assert.equal(Number((await q(`select count(*) from weights w join animals a on a.id = w.animal_id where a.tag = 'E-901'`))[0].count), 1);
+assert.equal(Number((await q(`select count(*) from transactions where farm_id = $1 and title like '%E-901%'`, [farm]))[0].count), 0, 'no expense');
+await assert.rejects(q(`select public.register_animals($1, $2, $3::jsonb)`, [farm, regPen, JSON.stringify([{ tag: 'E-901', sex: 'Macho', stage: 'Engorda' }])]), /já existe/);
+await assert.rejects(q(`select public.register_animals($1, $2, $3::jsonb)`, [farm, regPen, JSON.stringify([{ tag: 'E-903', sex: 'Macho', stage: 'Engorda' }, { tag: 'e-903', sex: 'Macho', stage: 'Engorda' }])]), /repetido/);
+await assert.rejects(q(`select public.register_animals($1, $2, $3::jsonb)`, [farm, regPen, JSON.stringify([{ tag: 'E-904', sex: 'X', stage: 'Engorda' }])]), /Verifique/);
+const smallPen = (await q(`insert into pens (farm_id, name, capacity) values ($1, 'Curral pequeno', 1) returning id`, [farm]))[0].id;
+await assert.rejects(q(`select public.register_animals($1, $2, $3::jsonb)`, [farm, smallPen, JSON.stringify([{ tag: 'E-905', sex: 'Macho', stage: 'Engorda' }, { tag: 'E-906', sex: 'Macho', stage: 'Engorda' }])]), /lugares/);
+const a901 = (await q(`select id from animals where tag = 'E-901'`))[0].id;
+await q(`insert into animal_photos (farm_id, animal_id, path, taken_on) values ($1, $2, 'x/old.jpg', current_date - 30)`, [farm, a901]);
+await q(`insert into animal_photos (farm_id, animal_id, path, taken_on) values ($1, $2, 'x/new.jpg', current_date - 2)`, [farm, a901]);
+assert.equal((await q(`select photo_path from animals where id = $1`, [a901]))[0].photo_path, 'x/new.jpg', 'main photo is the most recent');
+await q(`delete from animal_photos where path = 'x/new.jpg'`);
+assert.equal((await q(`select photo_path from animals where id = $1`, [a901]))[0].photo_path, 'x/old.jpg');
+await assert.rejects(q(`insert into animal_photos (farm_id, animal_id, path, taken_on) values ($1, $2, 'x/f.jpg', current_date + 5)`, [farm, a901]));
+console.log('existing animals and photos: ok');
+
+// Transfers of selected animals (20261119001300).
+const two = (await q(`select id from animals where farm_id = $1 and pen_id = $2 and removed_at is null order by tag limit 2`, [farm, regPen])).map((r) => r.id);
+assert.equal(two.length, 2);
+const leftBehind = Number((await q(`select count(*) from animals where pen_id = $1 and removed_at is null`, [regPen]))[0].count) - 1;
+assert.equal(Number((await q(`select public.log_transfer($1, null, $2, $3, current_date, null, $4::uuid[]) as n`, [farm, regPen, smallPen, [two[0]]]))[0].n), 1);
+assert.equal(Number((await q(`select count(*) from animals where pen_id = $1 and removed_at is null`, [regPen]))[0].count), leftBehind, 'only the chosen animal moves');
+console.log('transfer selection: ok');
 await q(`insert into transactions (farm_id, tx_date, title, account_id, kind, category, amount, batch_ids, batch_allocations)
   values ($1, current_date, 'Despesa distribuída', $2, 'Pontual', 'Veterinário', -100, $3, $4::jsonb)`,
   [farm, acct, ids, JSON.stringify(ids.map((batch_id) => ({ batch_id, amount: -50 })))]);

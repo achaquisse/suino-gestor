@@ -57,7 +57,10 @@ export const router = createBrowserRouter([
       { path: 'welcome', element: <Navigate to="/admin" replace /> },
       {
         element: <AdminGate />,
-        children: [{ path: 'admin', lazy: page(() => import('@/features/admin/AdminPage')) }],
+        children: [
+          { path: 'admin', lazy: page(() => import('@/features/admin/AdminPage')) },
+          { path: 'admin/utilizadores/:userId', lazy: page(() => import('@/features/admin/UserPage')) },
+        ],
       },
       {
         element: <FarmGate />,

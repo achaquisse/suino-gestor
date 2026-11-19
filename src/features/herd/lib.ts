@@ -90,30 +90,16 @@ export function penFlag(list: HA[]): PenFlag {
   return { text: 'Tudo em ordem', color: MUTED, icon: 'check_circle' }
 }
 
-export type PenGroupDef = { id: string; title: string; sub: string; icon: string; tint: string; ink: string; help: HelpDef[] }
-export const PEN_GROUPS: PenGroupDef[] = [
-  { id: 'mat', title: 'Maternidade', sub: 'Partos e lactação', icon: 'child_care', tint: '#FCE7F3', ink: '#B0306E', help: [pb('farrow', 'Guia do parto'), art('ninhada', 'Registar uma ninhada')] },
-  { id: 'cre', title: 'Crescimento', sub: 'Creche, recria e engorda', icon: 'trending_up', tint: '#E6F6EE', ink: '#0F7A44', help: [art('desmame', 'Desmame'), art('densidade', 'Densidade por curral'), art('carencia', 'Carência antes da venda')] },
-  { id: 'rep', title: 'Reprodução', sub: 'Gestação e varrasco', icon: 'favorite', tint: '#EEECFE', ink: '#4B3CD6', help: [pb('heat', 'Guia do cio'), art('parto', 'Calcular a data do parto')] },
-  { id: 'out', title: 'Outros', sub: 'Restantes currais', icon: 'fence', tint: '#F0F0F6', ink: '#55556A', help: [] },
-]
-
-export function penGroupId(p: Pick<Pen, 'name' | 'kind'>): string {
-  const s = `${p.name} ${p.kind}`.toLowerCase()
-  if (/matern|parto|lacta/.test(s)) return 'mat'
-  if (/creche|desmam|recria|engorda|crescimento|acab/.test(s)) return 'cre'
-  if (/gesta|varrasco|cobert|reprod|cio/.test(s)) return 'rep'
-  return 'out'
-}
-
-export function penHelp(p: Pick<Pen, 'name' | 'kind'>): HelpDef[] {
-  const s = `${p.name} ${p.kind}`.toLowerCase()
-  if (/matern|parto/.test(s)) return [pb('farrow', 'Guia do parto')]
-  if (/creche|desmam/.test(s)) return [art('desmame', 'Desmame')]
-  if (/recria/.test(s)) return [pb('flu', 'Gripe e tosse')]
-  if (/engorda/.test(s)) return [art('carencia', 'Carência'), art('limpeza', 'Limpeza entre lotes')]
-  if (/gesta|varrasco/.test(s)) return [pb('heat', 'Guia do cio')]
-  return []
+/** Help for a pen, from its role (shown on the pen in the farm layout and on the pen page). */
+export function penHelp(p: Pick<Pen, 'role'>): HelpDef[] {
+  switch (p.role) {
+    case 'maternidade': return [pb('farrow', 'Guia do parto'), art('ninhada', 'Registar uma ninhada')]
+    case 'creche': return [art('desmame', 'Desmame'), art('densidade', 'Densidade por curral')]
+    case 'recria': return [pb('flu', 'Gripe e tosse'), art('densidade', 'Densidade por curral')]
+    case 'engorda': return [art('carencia', 'Carência antes da venda'), art('limpeza', 'Limpeza entre lotes'), art('densidade', 'Densidade por curral')]
+    case 'gestacao': case 'varrasco': return [pb('heat', 'Guia do cio'), art('parto', 'Calcular a data do parto')]
+    default: return []
+  }
 }
 
 export const SORTS = [['tag', 'Brinco'], ['kg', 'Mais pesados'], ['age', 'Mais velhos'], ['pen', 'Curral']] as const

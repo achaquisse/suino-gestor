@@ -68,13 +68,3 @@ export const HCAT: Record<string, readonly [icon: string, bg: string, fg: string
   'Usar o Suino Gestor': ['devices', '#EEECFE', '#4B3CD6'],
 }
 
-export const PEN_ICON = (name: string, kind: string): readonly [icon: string, bg: string, fg: string] => {
-  const s = `${name} ${kind}`.toLowerCase()
-  if (/matern|parto/.test(s)) return ['child_care', '#FCE7F3', '#B0306E']
-  if (/creche|desmam/.test(s)) return ['nest_eco_leaf', '#E6F4F8', '#1F7894']
-  if (/recria/.test(s)) return ['trending_up', '#E6F6EE', '#0F7A44']
-  if (/engorda/.test(s)) return ['scale', '#EEECFE', '#4B3CD6']
-  if (/gesta/.test(s)) return ['favorite', '#FCE7F3', '#B0306E']
-  if (/varrasco/.test(s)) return ['male', '#F0F0F6', '#55556A']
-  return ['fence', '#F0F0F6', '#55556A']
-}

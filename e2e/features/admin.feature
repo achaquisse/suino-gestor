@@ -94,3 +94,45 @@ Feature: Platform administration
     And I should see the heading "Raças"
     And I should see the heading "Sintomas"
     And I should see the button "Nova raça"
+
+  @mutation @ADM-12
+  Scenario: Deactivate, reactivate and remove a user account
+    Given I am signed in as the admin
+    When I click the tab "Utilizadores"
+    And I open the spare account in the users list
+    And I click the button "Desactivar conta"
+    And I submit the sheet with "Desactivar"
+    Then I should see the toast "Conta desactivada"
+    And I should see the button "Activar conta"
+    When I click the button "Activar conta"
+    Then I should see the toast "Conta activada"
+    When I click the button "Remover conta"
+    And I submit the sheet with "Remover"
+    Then I should see the toast "Conta removida"
+    And the spare account should not be listed
+
+  @ADM-13
+  Scenario: The admin sees what a user did
+    Given I am signed in as the admin
+    When I click the tab "Utilizadores"
+    And I open the admin account in the users list
+    Then the breadcrumb should show "Ana Admin"
+    And I should see the heading "Actividade"
+    And I should see "operações"
+    And I should see "Criou"
+    But I should not see the button "Desactivar conta"
+
+  @ADM-14
+  Scenario: Search, filter, sort and page a user's activity
+    Given I am signed in as the admin
+    When I click the tab "Utilizadores"
+    And I open the admin account in the users list
+    And I filter the activity by "Criações" in "Operação"
+    And I filter the activity by "Granja" in "Tipo de registo"
+    And I search the activity for "E2E"
+    Then I should see "Criou granja"
+    And I should be on a page whose URL contains "op=insert"
+    When I filter the activity by "Mais antigas" in "Ordenar"
+    Then I should be on a page whose URL contains "ordem=old"
+    When I search the activity for "nada-assim-xyz"
+    Then I should see "Nenhuma operação encontrada"

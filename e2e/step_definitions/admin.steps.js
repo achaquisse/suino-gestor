@@ -142,3 +142,43 @@ Then('the users list should mark me as super admin', async () => {
     await waitVisible(row.getByText('Super admin', { exact: true }), 'the super admin chip')
   })
 })
+
+const userRow = (page, email) =>
+  page.getByRole('list', { name: 'Utilizadores' }).getByRole('article').filter({ hasText: email }).first()
+
+When('I open the {word} account in the users list', async (key) => {
+  const u = readState().users[key]
+  await pw(`open user ${key}`, async ({ page }) => {
+    await page.getByPlaceholder('Pesquisar nome ou email').fill(u.email)
+    await userRow(page, u.email).getByRole('button', { name: `Abrir ${u.name}`, exact: true }).click()
+    await waitVisible(page.getByRole('heading', { level: 1, name: u.name, exact: true }), `the ${key} account page`)
+  })
+})
+
+Then('the {word} account should be marked as deactivated', async (key) => {
+  const u = readState().users[key]
+  await pw('deactivated chip', async ({ page }) => {
+    await waitVisible(userRow(page, u.email).getByText('Desactivada', { exact: true }), 'the deactivated chip')
+  })
+})
+
+Then('the {word} account should not be listed', async (key) => {
+  const u = readState().users[key]
+  await pw('user gone', async ({ page }) => {
+    await waitVisible(page.getByPlaceholder('Pesquisar nome ou email'), 'the users list')
+    await page.getByPlaceholder('Pesquisar nome ou email').fill(u.email)
+    await waitVisible(page.getByText('Nenhum utilizador encontrado'), 'the empty users list')
+  })
+})
+
+When('I search the activity for {string}', async (text) => {
+  await pw('search activity', async ({ page }) => {
+    await page.getByPlaceholder('Pesquisar registo, granja ou valor').fill(text)
+  })
+})
+
+When('I filter the activity by {string} in {string}', async (option, label) => {
+  await pw(`activity ${label}`, async ({ page }) => {
+    await page.getByRole('combobox', { name: label, exact: true }).selectOption({ label: option })
+  })
+})

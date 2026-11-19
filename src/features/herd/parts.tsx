@@ -53,8 +53,10 @@ export function StatusChip({ a, className }: { a: HA; className?: string }) {
 
 const GRID = 'grid grid-cols-[0.9fr_1fr_0.7fr_1fr_0.8fr_1.1fr_1.4fr_20px] items-center gap-3 px-5'
 
-export function AnimalTable({ title, rows, thirdCol, showSearch, emptyText = 'Nenhum animal encontrado.' }: {
+export function AnimalTable({ title, rows, thirdCol, showSearch, emptyText = 'Nenhum animal encontrado.', toolbar, id }: {
   title: string; rows: HA[]; thirdCol: 'pen' | 'parents'; showSearch?: boolean; emptyText?: string
+  /** Search and filters shown inside the list section, under its title. */
+  toolbar?: ReactNode; id?: string
 }) {
   const nav = useNavigate()
   const [sort, setSort] = useUrlState<SortKey>('sort', 'tag', SORTS.map(([v]) => v))
@@ -67,7 +69,7 @@ export function AnimalTable({ title, rows, thirdCol, showSearch, emptyText = 'Ne
   )
   const { rows: page, pager } = usePaged(filtered, 25)
   return (
-    <Card className="overflow-hidden">
+    <Card className="scroll-mt-24 overflow-hidden" {...(id ? { id } : {})}>
       <div className="flex flex-wrap items-center justify-between gap-2.5 px-5 py-4">
         <div className="flex items-baseline gap-2.5">
           <h2 className="m-0 text-[15px] font-semibold">{title}</h2>
@@ -85,6 +87,7 @@ export function AnimalTable({ title, rows, thirdCol, showSearch, emptyText = 'Ne
           </Select>
         </div>
       </div>
+      {toolbar && <div className="flex flex-col gap-2.5 px-5 pb-4">{toolbar}</div>}
       <div className="no-scrollbar overflow-x-auto">
         <div className="min-w-[780px]">
           <div className={cx(GRID, 'bg-[#F7F7FB] py-3 text-[13px] text-muted')}>

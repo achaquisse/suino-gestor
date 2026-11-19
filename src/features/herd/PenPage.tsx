@@ -1,20 +1,32 @@
 import { useMemo } from 'react'
-import { useParams } from 'react-router'
+import { useNavigate, useParams } from 'react-router'
 import { useFarm } from '@/app/farm'
 import { useOverlays } from '@/app/overlays'
 import { Breadcrumbs, Button, Card, Empty, ErrorState, Icon, IconTile, Loading } from '@/ui'
-import { ACC, GREEN, PEN_ICON, RED, SGL, type StageGroup } from '@/lib/constants'
+import { ACC, GREEN, RED, SGL, type StageGroup } from '@/lib/constants'
+import { capacityLabel, penVisual } from '@/lib/pens'
 import { ageShort, penHelp } from './lib'
 import { AnimalTable, HelpBtn, Kpi, KpiGrid, avgLabel, avgOf, useHerd } from './parts'
+import { PenLayout } from './PenLayout'
 
 export default function PenPage() {
   const { penId } = useParams()
-  const { isOwner, canEditHerd } = useFarm()
+  const { canEditHerd } = useFarm()
   const { openLog, openBuyAnimals } = useOverlays()
   const { list, pens, loading, error, refetch } = useHerd()
 
   const pen = pens.data?.find((p) => p.id === penId)
   const rows = useMemo(() => list.filter((a) => a.pen_id === penId), [list, penId])
+  const [counts, alerts] = useMemo(() => {
+    const m = new Map<string, number>()
+    const at = new Map<string, number>()
+    for (const a of list) if (a.pen_id) {
+      m.set(a.pen_id, (m.get(a.pen_id) ?? 0) + 1)
+      if (a.attn) at.set(a.pen_id, (at.get(a.pen_id) ?? 0) + 1)
+    }
+    return [m, at] as const
+  }, [list])
+  const nav = useNavigate()
 
   if (loading) return <Loading />
   if (error) return <ErrorState error={error} retry={refetch} />
@@ -26,7 +38,7 @@ export default function PenPage() {
     )
   }
 
-  const [icon, tint, ink] = PEN_ICON(pen.name, pen.kind)
+  const [icon, tint, ink] = penVisual(pen)
   const cnt = new Map<StageGroup, number>()
   rows.forEach((a) => cnt.set(a.g, (cnt.get(a.g) ?? 0) + 1))
   const comp = [...cnt.entries()].map(([k, v]) => `${v} ${SGL[k].toLowerCase()}`).join(' · ') || 'Vazio'
@@ -51,17 +63,27 @@ export default function PenPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {isOwner && <Button icon="add_shopping_cart" onClick={() => openBuyAnimals(pen.id)}>Comprar</Button>}
+          {canEditHerd && !pen.blocked && <Button icon="add" onClick={() => openBuyAnimals(pen.id)}>Adicionar animais</Button>}
           {canEditHerd && <Button icon="move_down" onClick={() => openLog('transfer', { penId: pen.id })}>Transferir</Button>}
           {canEditHerd && <Button variant="soft" icon="vaccines" onClick={() => openLog('treatment', { penId: pen.id })}>Tratar curral</Button>}
         </div>
       </header>
 
+      {pen.blocked && (
+        <div className="flex items-start gap-2.5 rounded-2xl border border-[#F5C6C2] bg-danger-soft px-4 py-3 text-sm text-[#8E2620]">
+          <Icon name="block" size={20} className="shrink-0" />
+          <span><strong>Curral vedado</strong> · não recebe animais{pen.blocked_reason ? ` · ${pen.blocked_reason}` : ''}.</span>
+        </div>
+      )}
       <KpiGrid>
-        <Kpi label="Ocupação" value={`${rows.length} / ${pen.capacity}`} sub={`${Math.round(pc)}% da capacidade`} icon="fence" bg="#EEECFE" fg={ACC} />
+        <Kpi label="Ocupação" value={`${rows.length} / ${capacityLabel(pen)}`} sub={pen.capacity == null ? 'curral sem limite' : `${Math.round(pc)}% da capacidade`} icon="fence" bg="#EEECFE" fg={ACC} />
         <Kpi label="Composição" value={comp} sub="por fase" icon="category" bg="#F0F0F6" fg="#55556A" />
         <Kpi label="Peso médio" value={avgLabel(avgOf(rows))} sub={`idade média ${avgAge ? ageShort(avgAge) : '—'}`} icon="monitor_weight" bg="#E6F6EE" fg="#0F7A44" />
         <Kpi label="Precisam de atenção" value={attn} sub={attn ? 'ver estado na lista' : 'tudo em ordem'} icon="error" bg="#FDECEA" fg="#C0302A" valueColor={attn ? RED : GREEN} />
+        <Card as="div" className="flex min-w-0 flex-col gap-1.5 px-[18px] py-3.5">
+          <span className="text-[13px] text-muted">Localização na granja</span>
+          <PenLayout mini pens={pens.data ?? []} counts={counts} alerts={alerts} highlight={pen.id} onOpen={(p) => p.id !== pen.id && nav(`/herd/pens/${p.id}`)} />
+        </Card>
       </KpiGrid>
 
       {rows.length > 0 ? (
@@ -70,8 +92,8 @@ export default function PenPage() {
         <Card className="flex flex-col items-center gap-2.5 px-5 py-10 text-center">
           <Icon name="fence" size={32} className="text-faint" />
           <div className="font-semibold">Curral vazio</div>
-          <div className="text-sm text-muted">Transfira animais ou registe uma compra para este curral.</div>
-          {isOwner && <Button variant="soft" icon="add_shopping_cart" onClick={() => openBuyAnimals(pen.id)}>Registar compra</Button>}
+          <div className="text-sm text-muted">{pen.blocked ? 'Este curral está vedado e não recebe animais.' : 'Transfira animais, registe uma compra ou registe animais que já estão na granja.'}</div>
+          {canEditHerd && !pen.blocked && <Button variant="soft" icon="add" onClick={() => openBuyAnimals(pen.id)}>Adicionar animais</Button>}
         </Card>
       )}
     </div>

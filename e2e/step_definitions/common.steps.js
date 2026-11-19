@@ -88,6 +88,13 @@ Then('I should see the main navigation item {string}', async (label) => {
   })
 })
 
+When('I switch on {string}', async (name) => {
+  await pw(`switch ${name}`, async ({ page }) => {
+    const sw = dialog(page).getByRole('switch', { name, exact: true })
+    if ((await sw.getAttribute('aria-checked')) !== 'true') await sw.click()
+  })
+})
+
 // Client-side navigation: keeps the in-memory cache, like a user moving between pages.
 When('I go to {string} in the main navigation', async (label) => {
   await pw(`nav ${label}`, async ({ page }) => {

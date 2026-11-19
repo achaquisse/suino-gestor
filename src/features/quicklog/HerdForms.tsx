@@ -3,8 +3,9 @@ import { useRpc, useTableMutations } from '@/lib/queries'
 import { useFarm } from '@/app/farm'
 import { dShort, plural } from '@/lib/format'
 import { Field, Icon, Input, Segmented, Select, Stepper } from '@/ui'
+import { freePlaces } from '@/lib/pens'
 import {
-  AnimalSelect, CommonFields, FormSheet, LockedAnimal, firstId, isSow, scoped, useBase, useCommon, useSubmit, type FormProps,
+  AnimalSelect, Chipper, CommonFields, FormSheet, LockedAnimal, firstId, isSow, scoped, useBase, useCommon, useSubmit, type FormProps,
 } from './shared'
 
 export function TransferForm({ ctx, onBack, onClose }: FormProps) {
@@ -15,18 +16,24 @@ export function TransferForm({ ctx, onBack, onClose }: FormProps) {
   const ctxAnimal = ctx.animalId ? animals.find((a) => a.id === ctx.animalId) : undefined
   const initialFrom = ctxAnimal?.pen_id ?? ctx.penId ?? pens.find((p) => count(p.id) > 0)?.id ?? pens[0]?.id ?? ''
   const [from, setFrom] = useState(initialFrom)
-  const [to, setTo] = useState(pens.find((p) => p.id !== initialFrom)?.id ?? '')
+  const [to, setTo] = useState(pens.find((p) => p.id !== initialFrom && !p.blocked)?.id ?? '')
+  // The animals moved must be chosen explicitly ("Seleccionar todos" takes the whole pen).
+  const [sel, setSel] = useState<string[]>([])
+  const fromAnimals = animals.filter((a) => a.pen_id === from)
+  const chosen = ctxAnimal ? [ctxAnimal.id] : sel.filter((id) => fromAnimals.some((a) => a.id === id))
+  const allOn = fromAnimals.length > 0 && chosen.length === fromAnimals.length
+  const toggle = (id: string) => setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
   const dest = pens.find((p) => p.id === to)
-  const n = ctxAnimal ? 1 : count(from)
-  const free = dest ? dest.capacity - count(dest.id) : 0
+  const n = chosen.length
+  const free = dest ? freePlaces(dest, count(dest.id)) : 0
   const ok = free >= n
-  const label = ctxAnimal ? ctxAnimal.tag : `${plural(n, 'animal', 'animais')} de ${penName(from)}`
+  const label = ctxAnimal ? ctxAnimal.tag : n === 1 ? fromAnimals.find((a) => a.id === chosen[0])?.tag ?? '1 animal' : `${plural(n, 'animal', 'animais')} de ${penName(from)}`
 
   const submit = () => run(async () => {
     if (!dest) throw new Error('Escolha um curral de destino.')
-    if (n < 1) throw new Error('Não há animais para transferir.')
+    if (n < 1) throw new Error('Seleccione os animais a transferir.')
     if (!ok) throw new Error('O curral de destino não tem lugares suficientes.')
-    await rpc.mutateAsync({ p_animal: ctxAnimal?.id ?? null, p_from: from || null, p_to: dest.id, p_date: c.date, p_by: c.by })
+    await rpc.mutateAsync({ p_animal: ctxAnimal?.id ?? null, p_from: ctxAnimal ? null : from || null, p_animals: ctxAnimal ? null : chosen, p_to: dest.id, p_date: c.date, p_by: c.by })
     return `Transferência registada · ${label} → ${dest.name} · ${c.by}`
   })
 
@@ -36,16 +43,33 @@ export function TransferForm({ ctx, onBack, onClose }: FormProps) {
       {ctxAnimal && <LockedAnimal animal={ctxAnimal} penName={penName(ctxAnimal.pen_id)} />}
       {!ctxAnimal && (
         <Field label="Origem">
-          <Select value={from} onChange={(e) => { setFrom(e.target.value); if (e.target.value === to) setTo(pens.find((p) => p.id !== e.target.value)?.id ?? '') }}>
+          <Select value={from} onChange={(e) => { setFrom(e.target.value); setSel([]); if (e.target.value === to) setTo(pens.find((p) => p.id !== e.target.value && !p.blocked)?.id ?? '') }}>
             {pens.map((p) => <option key={p.id} value={p.id}>{p.name} · {plural(count(p.id), 'animal', 'animais')}</option>)}
           </Select>
         </Field>
       )}
+      {!ctxAnimal && (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-[13px] font-semibold text-ink-2">Animais a transferir</span>
+            <span className="text-[13px] font-semibold text-accent-strong">{plural(n, 'seleccionado', 'seleccionados')}</span>
+          </div>
+          {fromAnimals.length ? (
+            <div className="no-scrollbar flex max-h-[172px] flex-wrap gap-1.5 overflow-auto p-0.5">
+              <Chipper on={allOn} icon={allOn ? 'check' : 'add'} onClick={() => setSel(allOn ? [] : fromAnimals.map((a) => a.id))}>Seleccionar todos · {fromAnimals.length}</Chipper>
+              {fromAnimals.map((a) => (
+                <Chipper key={a.id} on={chosen.includes(a.id)} icon={chosen.includes(a.id) ? 'check' : undefined} onClick={() => toggle(a.id)} title={`${a.stage} · ${a.status}`} tab>{a.tag}</Chipper>
+              ))}
+            </div>
+          ) : <span className="text-[13px] text-muted">Este curral não tem animais.</span>}
+        </div>
+      )}
       <Field label="Destino" hint={<span style={{ color: ok ? undefined : '#D0342C' }}>{ok
-        ? `Cabem ${plural(n, 'animal', 'animais')} · ${free - n === 1 ? 'fica 1 lugar livre' : `ficam ${free - n} lugares livres`}`
+        ? `Cabem ${plural(n, 'animal', 'animais')}${free === Infinity ? ' · curral sem limite' : ` · ${free - n === 1 ? 'fica 1 lugar livre' : `ficam ${free - n} lugares livres`}`}`
         : `Capacidade insuficiente · faltam ${n - free} lugares`}</span>}>
         <Select value={to} onChange={(e) => setTo(e.target.value)}>
-          {pens.filter((p) => p.id !== from).map((p) => <option key={p.id} value={p.id}>{p.name} · {p.capacity - count(p.id)} lugares livres</option>)}
+          {/* Blocked ("vedado") pens take no animals. */}
+          {pens.filter((p) => p.id !== from && !p.blocked).map((p) => <option key={p.id} value={p.id}>{p.name} · {p.capacity == null ? 'sem limite' : `${p.capacity - count(p.id)} lugares livres`}</option>)}
         </Select>
       </Field>
       <CommonFields c={c} byLabel="Responsável" />

@@ -3,17 +3,19 @@ import { setUrlParams, useUrlState } from '@/lib/urlState'
 import { Icon } from '@/ui'
 import { cx } from '@/ui'
 import GeneralTab from './GeneralTab'
+import PensTab from './PensTab'
 import AccountsTab from './AccountsTab'
 import ParamsTab from './ParamsTab'
 
-type Tab = 'geral' | 'contas' | 'params'
+type Tab = 'geral' | 'currais' | 'contas' | 'params'
 
 export default function SettingsPage() {
   const { canSeeMoney } = useFarm()
-  const [tab] = useUrlState<Tab>('tab', 'geral', ['geral', 'contas', 'params'])
+  const [tab] = useUrlState<Tab>('tab', 'geral', ['geral', 'currais', 'contas', 'params'])
   const setTab = (t: Tab) => setUrlParams({ tab: t === 'geral' ? null : t, q: null, group: null, kind: null, page: null, per: null })
   const tabs: [Tab, string, string][] = [
     ['geral', 'Geral', 'tune'],
+    ['currais', 'Currais', 'fence'],
     ...(canSeeMoney ? ([['contas', 'Contas', 'account_balance']] as [Tab, string, string][]) : []),
     ['params', 'Parâmetros', 'settings_suggest'],
   ]
@@ -34,6 +36,7 @@ export default function SettingsPage() {
         </div>
       </header>
       {active === 'geral' && <GeneralTab />}
+      {active === 'currais' && <PensTab />}
       {active === 'contas' && <AccountsTab />}
       {active === 'params' && <ParamsTab />}
     </div>

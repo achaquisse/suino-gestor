@@ -10,10 +10,22 @@ export type Database = {
         Update: { id?: string; farm_id?: string; name?: string; kind?: string; holder?: string; initial_balance?: number; color?: string; active?: boolean; created_at?: string }
         Relationships: []
       }
+      animal_photos: {
+        Row: { id: string; farm_id: string; animal_id: string; path: string; taken_on: string; note: string; created_by: string | null; created_at: string }
+        Insert: { id?: string; farm_id: string; animal_id: string; path: string; taken_on?: string; note?: string; created_by?: string | null; created_at?: string }
+        Update: { id?: string; farm_id?: string; animal_id?: string; path?: string; taken_on?: string; note?: string; created_by?: string | null; created_at?: string }
+        Relationships: []
+      }
       animals: {
         Row: { id: string; farm_id: string; tag: string; pen_id: string | null; sex: string; stage: string; breed: string; born_on: string | null; weight_kg: number; status: string; tone: string; parents: string; notes: string; photo_path: string | null; withdrawal_until: string | null; removed_at: string | null; removed_reason: string | null; created_at: string }
         Insert: { id?: string; farm_id: string; tag: string; pen_id?: string | null; sex?: string; stage: string; breed?: string; born_on?: string | null; weight_kg?: number; status?: string; tone?: string; parents?: string; notes?: string; photo_path?: string | null; withdrawal_until?: string | null; removed_at?: string | null; removed_reason?: string | null; created_at?: string }
         Update: { id?: string; farm_id?: string; tag?: string; pen_id?: string | null; sex?: string; stage?: string; breed?: string; born_on?: string | null; weight_kg?: number; status?: string; tone?: string; parents?: string; notes?: string; photo_path?: string | null; withdrawal_until?: string | null; removed_at?: string | null; removed_reason?: string | null; created_at?: string }
+        Relationships: []
+      }
+      audit_log: {
+        Row: { id: number; at: string; user_id: string | null; user_email: string; user_name: string; farm_id: string | null; farm_name: string; action: string; entity: string; row_id: string | null; label: string; changes: Json }
+        Insert: { id?: number; at?: string; user_id?: string | null; user_email?: string; user_name?: string; farm_id?: string | null; farm_name?: string; action: string; entity: string; row_id?: string | null; label?: string; changes?: Json }
+        Update: { id?: number; at?: string; user_id?: string | null; user_email?: string; user_name?: string; farm_id?: string | null; farm_name?: string; action?: string; entity?: string; row_id?: string | null; label?: string; changes?: Json }
         Relationships: []
       }
       batches: {
@@ -83,15 +95,15 @@ export type Database = {
         Relationships: []
       }
       pens: {
-        Row: { id: string; farm_id: string; name: string; kind: string; capacity: number; sort: number; created_at: string }
-        Insert: { id?: string; farm_id: string; name: string; kind?: string; capacity?: number; sort?: number; created_at?: string }
-        Update: { id?: string; farm_id?: string; name?: string; kind?: string; capacity?: number; sort?: number; created_at?: string }
+        Row: { id: string; farm_id: string; name: string; kind: string; capacity: number | null; sort: number; created_at: string; role: string; color: string | null; icon: string | null; x: number; y: number; w: number; h: number; blocked: boolean; blocked_reason: string }
+        Insert: { id?: string; farm_id: string; name: string; kind?: string; capacity?: number | null; sort?: number; created_at?: string; role?: string; color?: string | null; icon?: string | null; x?: number; y?: number; w?: number; h?: number; blocked?: boolean; blocked_reason?: string }
+        Update: { id?: string; farm_id?: string; name?: string; kind?: string; capacity?: number | null; sort?: number; created_at?: string; role?: string; color?: string | null; icon?: string | null; x?: number; y?: number; w?: number; h?: number; blocked?: boolean; blocked_reason?: string }
         Relationships: []
       }
       profiles: {
-        Row: { id: string; full_name: string; email: string; avatar_url: string | null; created_at: string }
-        Insert: { id: string; full_name?: string; email?: string; avatar_url?: string | null; created_at?: string }
-        Update: { id?: string; full_name?: string; email?: string; avatar_url?: string | null; created_at?: string }
+        Row: { id: string; full_name: string; email: string; avatar_url: string | null; created_at: string; disabled_at: string | null }
+        Insert: { id: string; full_name?: string; email?: string; avatar_url?: string | null; created_at?: string; disabled_at?: string | null }
+        Update: { id?: string; full_name?: string; email?: string; avatar_url?: string | null; created_at?: string; disabled_at?: string | null }
         Relationships: []
       }
       recurring_expenses: {
@@ -162,7 +174,10 @@ export type Database = {
     Functions: {
       accept_invites: { Args: Record<string, never>; Returns: number }
       admin_create_farm: { Args: { p_name: string; p_owner_email?: string; p_demo?: boolean }; Returns: string }
+      admin_delete_user: { Args: { p_user: string }; Returns: undefined }
       admin_farms: { Args: Record<string, never>; Returns: Record<string, unknown>[] }
+      admin_set_user_active: { Args: { p_user: string; p_active: boolean }; Returns: undefined }
+      admin_user_activity: { Args: { p_user: string; p_query?: string; p_action?: string; p_entity?: string; p_sort?: string; p_offset?: number; p_limit?: number }; Returns: Record<string, unknown>[] }
       admin_users: { Args: Record<string, never>; Returns: Record<string, unknown>[] }
       buy_animals: { Args: { p_farm: string; p_qty: number; p_stage: string; p_sex: string; p_breed: string; p_kg: number; p_pen: string; p_born: string; p_supplier: string; p_price: number; p_account: string; p_date?: string; p_by?: string }; Returns: string[] }
       count_stock: { Args: { p_farm: string; p_item: string; p_count: number; p_note?: string; p_date?: string; p_by?: string }; Returns: number }
@@ -170,6 +185,7 @@ export type Database = {
       fmt_mt: { Args: { v: number }; Returns: string }
       has_role: { Args: { p_farm: string; p_roles: string[] }; Returns: boolean }
       help_fold: { Args: { p_text: string }; Returns: string }
+      is_active_user: { Args: Record<string, never>; Returns: boolean }
       is_member: { Args: { p_farm: string }; Returns: boolean }
       is_super_admin: { Args: Record<string, never>; Returns: boolean }
       log_birth: { Args: { p_farm: string; p_sow: string; p_live: number; p_dead?: number; p_date?: string; p_by?: string }; Returns: number }
@@ -178,7 +194,7 @@ export type Database = {
       log_mating: { Args: { p_farm: string; p_sow: string; p_method?: string; p_boar?: string; p_date?: string; p_by?: string }; Returns: string }
       log_sale: { Args: { p_farm: string; p_animal: string; p_kg: number; p_price_per_kg: number; p_buyer: string; p_account: string; p_date?: string; p_by?: string; p_batch?: string }; Returns: number }
       log_stock_purchase: { Args: { p_farm: string; p_item: string; p_qty: number; p_price: number; p_supplier: string; p_account: string; p_date?: string; p_by?: string }; Returns: number }
-      log_transfer: { Args: { p_farm: string; p_animal: string; p_from: string; p_to: string; p_date?: string; p_by?: string }; Returns: number }
+      log_transfer: { Args: { p_farm: string; p_animal: string; p_from: string; p_to: string; p_date?: string; p_by?: string; p_animals?: string[] }; Returns: number }
       log_treatment: { Args: { p_farm: string; p_animal_ids: string[]; p_product: string; p_product_name: string; p_withdrawal_days?: number; p_stock_code?: string; p_date?: string; p_by?: string }; Returns: number }
       log_weight: { Args: { p_farm: string; p_animal: string; p_kg: number; p_date?: string; p_by?: string }; Returns: undefined }
       move_stock: { Args: { p_farm: string; p_item: string; p_kind: string; p_qty: number; p_reason: string; p_note?: string; p_date?: string; p_by?: string; p_price?: number; p_account?: string; p_supplier?: string }; Returns: number }
@@ -186,7 +202,9 @@ export type Database = {
       param: { Args: { p_farm: string; p_key: string; p_default: number }; Returns: number }
       pay_debt: { Args: { p_id: string; p_amount?: number; p_date?: string }; Returns: number }
       pay_recurring: { Args: { p_id: string; p_date?: string }; Returns: string }
+      pen_role_of: { Args: { p_name: string; p_kind: string }; Returns: string }
       pt_short: { Args: { d: string }; Returns: string }
+      register_animals: { Args: { p_farm: string; p_pen: string; p_animals: Json; p_date?: string; p_by?: string }; Returns: string[] }
       require_role: { Args: { p_farm: string; p_roles: string[] }; Returns: undefined }
       require_super_admin: { Args: Record<string, never>; Returns: undefined }
       search_help: { Args: { p_query?: string; p_cat?: string }; Returns: Json }
