@@ -1,11 +1,11 @@
 import { useMemo, type ReactNode } from 'react'
 import { setUrlParams, useUrlState } from '@/lib/urlState'
 import { Link, useNavigate } from 'react-router'
-import { Card, Icon, IconTile, Pager, Select, cx, usePaged } from '@/ui'
+import { Card, Icon, IconTile, Pager, cx, usePaged } from '@/ui'
 import { TONE } from '@/lib/constants'
 import { useAnimals, usePens } from '@/lib/queries'
 import { ageLabel, dec, plural } from '@/lib/format'
-import { SORTS, enrich, fmtKg, sortAnimals, type HA, type HelpDef, type SortKey } from './lib'
+import { SORT_DIRS, SORT_KEYS, defaultDir, enrich, fmtKg, sortAnimals, type HA, type HelpDef, type SortDir, type SortKey } from './lib'
 
 export function useHerd() {
   const animals = useAnimals()
@@ -59,14 +59,24 @@ export function AnimalTable({ title, rows, thirdCol, showSearch, emptyText = 'Ne
   toolbar?: ReactNode; id?: string
 }) {
   const nav = useNavigate()
-  const [sort, setSort] = useUrlState<SortKey>('sort', 'tag', SORTS.map(([v]) => v))
+  const [sort] = useUrlState<SortKey>('sort', 'tag', SORT_KEYS)
+  const [rawDir] = useUrlState<SortDir | ''>('dir', '', SORT_DIRS)
+  const dir = rawDir || defaultDir(sort)
+  const toggleSort = (k: SortKey) => {
+    const next = k === sort ? (dir === 'asc' ? 'desc' : 'asc') : defaultDir(k)
+    setUrlParams({ sort: k === 'tag' ? null : k, dir: next === defaultDir(k) ? null : next, page: null })
+  }
   const [q] = useUrlState('q', '')
   const setQ = (v: string) => setUrlParams({ q: v, page: null })
   const ql = q.trim().toLowerCase()
   const filtered = useMemo(
-    () => sortAnimals(showSearch && ql ? rows.filter((a) => `${a.tag} ${a.stage} ${a.status}`.toLowerCase().includes(ql)) : rows, sort),
-    [rows, sort, ql, showSearch],
+    () => sortAnimals(showSearch && ql ? rows.filter((a) => `${a.tag} ${a.stage} ${a.status}`.toLowerCase().includes(ql)) : rows, sort, dir),
+    [rows, sort, dir, ql, showSearch],
   )
+  const cols: [SortKey, string, boolean?][] = [
+    ['tag', 'Brinco'], ['stage', 'Fase'], ['sex', 'Sexo'], ['age', 'Idade'], ['kg', 'Peso', true],
+    thirdCol === 'pen' ? ['pen', 'Curral'] : ['parents', 'Pais'], ['status', 'Estado'],
+  ]
   const { rows: page, pager } = usePaged(filtered, 25)
   return (
     <Card className="scroll-mt-24 overflow-hidden" {...(id ? { id } : {})}>
@@ -75,24 +85,32 @@ export function AnimalTable({ title, rows, thirdCol, showSearch, emptyText = 'Ne
           <h2 className="m-0 text-[15px] font-semibold">{title}</h2>
           <span className="text-[13px] text-muted">{plural(filtered.length, 'animal', 'animais')}</span>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {showSearch && (
-            <label className="flex h-11 w-[220px] max-w-full items-center gap-2 rounded-xl border border-line-strong bg-white px-3">
-              <Icon name="search" size={18} className="text-faint" />
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Procurar neste curral" className="min-w-0 flex-1 border-0 bg-transparent text-sm outline-none" />
-            </label>
-          )}
-          <Select aria-label="Ordenar" value={sort} onChange={(e) => setSort(e.target.value as SortKey)} className="h-11 w-auto rounded-xl">
-            {SORTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-          </Select>
-        </div>
+        {showSearch && (
+          <label className="flex h-11 w-[220px] max-w-full items-center gap-2 rounded-xl border border-line-strong bg-white px-3">
+            <Icon name="search" size={18} className="text-faint" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Procurar neste curral" className="min-w-0 flex-1 border-0 bg-transparent text-sm outline-none" />
+          </label>
+        )}
       </div>
       {toolbar && <div className="flex flex-col gap-2.5 px-5 pb-4">{toolbar}</div>}
       <div className="no-scrollbar overflow-x-auto">
         <div className="min-w-[780px]">
-          <div className={cx(GRID, 'bg-[#F7F7FB] py-3 text-[13px] text-muted')}>
-            <span>Brinco</span><span>Fase</span><span>Sexo</span><span>Idade</span><span className="text-right">Peso</span>
-            <span>{thirdCol === 'pen' ? 'Curral' : 'Pais'}</span><span>Estado</span><span />
+          <div role="row" className={cx(GRID, 'bg-[#F7F7FB] py-1.5 text-[13px] text-muted')}>
+            {cols.map(([k, l, right]) => {
+              const on = sort === k
+              return (
+                <span key={k} role="columnheader" aria-sort={on ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'} className={cx('flex min-w-0', right && 'justify-end')}>
+                  <button type="button" onClick={() => toggleSort(k)} title={`Ordenar por ${l.toLowerCase()}`}
+                    className={cx('group -mx-1.5 flex h-8 min-w-0 items-center gap-0.5 rounded-lg border-0 bg-transparent px-1.5 text-[13px] hover:bg-[#ECECF4] hover:text-ink',
+                      right && 'flex-row-reverse', on ? 'font-semibold text-ink' : 'font-normal text-muted')}>
+                    <span className="truncate">{l}</span>
+                    <Icon name={on && dir === 'desc' ? 'arrow_downward' : 'arrow_upward'} size={15}
+                      className={cx('shrink-0', on ? 'text-accent-strong' : 'opacity-0 group-hover:opacity-50')} />
+                  </button>
+                </span>
+              )
+            })}
+            <span />
           </div>
           {!filtered.length && <div className="px-5 py-8 text-center text-muted">{emptyText}</div>}
           {page.map((a) => (

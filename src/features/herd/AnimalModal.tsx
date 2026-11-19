@@ -6,7 +6,7 @@ import { Button, Field, FormError, Icon, Input, Loading, Segmented, Select, Shee
 import { STAGES } from '@/lib/constants'
 import type { Sex, Stage } from '@/lib/database.types'
 import { errorMessage, supabase } from '@/lib/supabase'
-import { signedUrl, storageSafeName, useAccounts, useAnimals, useBreeds, usePens, useRpc, useTableMutations, useTeamNames } from '@/lib/queries'
+import { signedUrl, storageSafeName, useAccounts, useAnimals, useBreeds, usePens, useRpc, useTableMutations } from '@/lib/queries'
 import { dShort, numP, plural, todayISO, validDate } from '@/lib/format'
 import { freePlaces } from '@/lib/pens'
 import { RegisterAnimalsSheet } from './RegisterAnimalsSheet'
@@ -50,7 +50,6 @@ function BuyForm({ penId, onClose, originSwitch }: { penId?: string; onClose: ()
   const accounts = useAccounts()
   const breedsQ = useBreeds()
   const breeds = (breedsQ.data ?? []).filter((b) => b.active)
-  const team = useTeamNames()
   const buy = useRpc('buy_animals')
   const [qty, setQty] = useState('10')
   const [stage, setStage] = useState<Stage>('Desmamado')
@@ -63,7 +62,6 @@ function BuyForm({ penId, onClose, originSwitch }: { penId?: string; onClose: ()
   const [price, setPrice] = useState('')
   const [account, setAccount] = useState('')
   const [date, setDate] = useState(todayISO())
-  const [by, setBy] = useState(user.name)
   const [error, setError] = useState<string | null>(null)
 
   const loading = pens.isPending || animals.isPending || accounts.isPending || breedsQ.isPending
@@ -79,7 +77,6 @@ function BuyForm({ penId, onClose, originSwitch }: { penId?: string; onClose: ()
   const penId2 = pen || penList[0]?.id || ''
   const n = numP(qty)
   const total = numP(price)
-  const names = [user.name, ...team.filter((t) => t !== user.name)]
 
   const save = async () => {
     const penRow = penList.find((p) => p.id === penId2)
@@ -92,12 +89,11 @@ function BuyForm({ penId, onClose, originSwitch }: { penId?: string; onClose: ()
     if (!accs.some((a) => a.id === accountId && a.active)) return setError('Escolha uma conta de pagamento activa.')
     if (!validDate(date)) return setError('Indique uma data de compra válida.')
     if (born && (!validDate(born) || born > date)) return setError('Indique uma data de nascimento válida, anterior à compra.')
-    if (!by.trim()) return setError('Indique o responsável pela compra.')
     setError(null)
     try {
       await buy.mutateAsync({
         p_qty: n, p_stage: stage, p_sex: sex, p_breed: breed || breeds[0].name, p_kg: numP(kg), p_pen: penId2,
-        p_born: (born || null) as unknown as string, p_supplier: supplier.trim(), p_price: total, p_account: accountId, p_date: date, p_by: by,
+        p_born: (born || null) as unknown as string, p_supplier: supplier.trim(), p_price: total, p_account: accountId, p_date: date, p_by: user.name,
       })
       toast(`${plural(n, 'animal registado', 'animais registados')} · ${penRow.name}`)
       onClose()
@@ -156,9 +152,6 @@ function BuyForm({ penId, onClose, originSwitch }: { penId?: string; onClose: ()
           </Row>
           <Row>
             <Field label="Data da compra"><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
-            <Field label="Responsável">
-              <Select value={by} onChange={(e) => setBy(e.target.value)}>{names.map((t) => <option key={t} value={t}>{t === user.name ? `${t} (eu)` : t}</option>)}</Select>
-            </Field>
           </Row>
           <div className="grid grid-cols-3 gap-2.5">
             {[['Brincos a criar', n ? String(n) : '—'], ['Preço por animal', n && total ? `${Math.round(total / n)} MT` : '—'], ['Lugares livres', free(penId2) === Infinity ? 'Sem limite' : String(free(penId2))]].map(([l, v]) => (
@@ -273,7 +266,9 @@ function EditForm({ animalId, onClose }: { animalId?: string; onClose: () => voi
             <Field label="Raça"><Select value={f.breed} onChange={(e) => patch({ breed: e.target.value })}>{breeds.map((b) => <option key={b}>{b}</option>)}</Select></Field>
           </Row>
           <Field label="Data de nascimento"><Input type="date" max={todayISO()} value={f.born} onChange={(e) => patch({ born: e.target.value })} /></Field>
-          <Field label="Notas"><Textarea value={f.notes} onChange={(e) => patch({ notes: e.target.value })} /></Field>
+          <Field label="Descrição e características">
+            <Textarea value={f.notes} onChange={(e) => patch({ notes: e.target.value })} rows={3} placeholder="ex.: manchas pretas no dorso, orelha esquerda cortada, temperamento calmo" />
+          </Field>
           <p className="m-0 text-[13px] text-muted">Para mudar de curral use Transferir; o peso actualiza-se com uma nova pesagem.</p>
           <FormError>{error}</FormError>
         </div>

@@ -1,4 +1,4 @@
-import { ACC, MUTED, RED, SGC, TONE, stageGroup, type StageGroup } from '@/lib/constants'
+import { ACC, MUTED, RED, SGC, STAGES, TONE, stageGroup, type StageGroup } from '@/lib/constants'
 import type { Animal, Pen } from '@/lib/database.types'
 import { MONTHS3, addDays, ageDays, dShort, daysTo, todayISO } from '@/lib/format'
 import type { LogType } from '@/lib/constants'
@@ -102,18 +102,27 @@ export function penHelp(p: Pick<Pen, 'role'>): HelpDef[] {
   }
 }
 
-export const SORTS = [['tag', 'Brinco'], ['kg', 'Mais pesados'], ['age', 'Mais velhos'], ['pen', 'Curral']] as const
-export type SortKey = (typeof SORTS)[number][0]
+export const SORT_KEYS = ['tag', 'stage', 'sex', 'age', 'kg', 'pen', 'parents', 'status'] as const
+export type SortKey = (typeof SORT_KEYS)[number]
+export type SortDir = 'asc' | 'desc'
+export const SORT_DIRS: readonly SortDir[] = ['asc', 'desc']
+export const defaultDir = (k: SortKey): SortDir => (k === 'kg' || k === 'age' ? 'desc' : 'asc')
 
-export function sortAnimals(list: HA[], key: SortKey): HA[] {
-  const byTag = (a: HA, b: HA) => a.tag.localeCompare(b.tag)
+export function sortAnimals(list: HA[], key: SortKey, dir: SortDir = defaultDir(key)): HA[] {
+  const text = (a: string, b: string) => a.localeCompare(b, 'pt', { numeric: true, sensitivity: 'base' })
+  const byTag = (a: HA, b: HA) => text(a.tag, b.tag)
   const cmp: Record<SortKey, (a: HA, b: HA) => number> = {
     tag: byTag,
-    kg: (a, b) => b.weight_kg - a.weight_kg,
-    age: (a, b) => b.ageD - a.ageD,
-    pen: (a, b) => a.penName.localeCompare(b.penName) || byTag(a, b),
+    stage: (a, b) => STAGES.indexOf(a.stage) - STAGES.indexOf(b.stage),
+    sex: (a, b) => text(a.sex, b.sex),
+    age: (a, b) => a.ageD - b.ageD,
+    kg: (a, b) => a.weight_kg - b.weight_kg,
+    pen: (a, b) => text(a.penName, b.penName),
+    parents: (a, b) => (!a.parents ? 1 : 0) - (!b.parents ? 1 : 0) || text(a.parents ?? '', b.parents ?? ''),
+    status: (a, b) => Number(b.attn) - Number(a.attn) || text(a.status, b.status),
   }
-  return list.slice().sort(cmp[key])
+  const sign = dir === 'asc' ? 1 : -1
+  return list.slice().sort((a, b) => sign * cmp[key](a, b) || byTag(a, b))
 }
 
 export const fmtKg = (v: number) => `${v < 10 ? v.toFixed(1).replace('.', ',') : Math.round(v)} kg`

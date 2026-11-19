@@ -1,6 +1,6 @@
 import { Suspense, useId, useLayoutEffect, useRef, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { NavLink, Outlet, useLocation, useMatch, useNavigate, useParams } from 'react-router'
+import { Link, NavLink, Outlet, useLocation, useMatch, useNavigate, useParams } from 'react-router'
 import { Avatar, Icon, Loading, Logo, cx, usePopover, useToast } from '@/ui'
 import { ROLE_LABEL } from '@/lib/constants'
 import { useAnimal, useInvalidateFarm, useNotificationResolutions } from '@/lib/queries'
@@ -214,7 +214,9 @@ export function Shell() {
         {/* Wide header */}
         <div className="sticky top-0 z-30 mx-auto hidden w-full max-w-[1120px] px-10 pt-4 wide:block">
           <header className="glass flex items-center gap-1 rounded-[22px] border border-white/95 p-2 shadow-[inset_0_1px_0_#fff,0_1px_2px_rgba(16,24,40,0.05),0_14px_40px_rgba(91,76,245,0.14)]">
-            <Logo size={42} className="mr-2 shrink-0 rounded-[13px] shadow-[0_4px_12px_rgba(91,76,240,0.3)]" />
+            <Link to="/herd" aria-label="Ir para Animais" title="Animais" className="mr-2 flex shrink-0 rounded-[13px] transition-transform active:scale-[0.94]">
+              <Logo size={42} className="rounded-[13px] shadow-[0_4px_12px_rgba(91,76,240,0.3)]" />
+            </Link>
             <nav ref={topRef} className="relative flex min-w-0 flex-1 gap-0.5" aria-label="Principal">
               <div className="absolute -bottom-0.5 h-[3px] rounded-t-[3px] bg-accent transition-[left,width,opacity] duration-[450ms] ease-spring"
                 style={{ left: (topPos?.l ?? 0) + 12, width: Math.max(0, (topPos?.w ?? 0) - 24), opacity: topPos ? 1 : 0 }} />
@@ -237,7 +239,9 @@ export function Shell() {
 
         {/* Narrow top bar */}
         <div className="glass sticky top-0 z-30 flex items-center gap-2.5 border-b border-white/90 pr-[max(16px,env(safe-area-inset-right))] pl-[max(16px,env(safe-area-inset-left))] pt-[max(12px,env(safe-area-inset-top))] pb-3 wide:hidden">
-          <Logo size={28} className="rounded-lg shadow-[0_4px_14px_rgba(91,76,240,0.26)]" />
+          <Link to="/herd" aria-label="Ir para Animais" title="Animais" className="flex shrink-0 rounded-lg transition-transform active:scale-[0.94]">
+            <Logo size={28} className="rounded-lg shadow-[0_4px_14px_rgba(91,76,240,0.26)]" />
+          </Link>
           <button type="button" onClick={cycleFarm} className="flex min-w-0 flex-1 items-center gap-1 border-0 bg-transparent p-0 text-left">
             <span className="truncate text-sm font-semibold">{farm.name}</span>
             {memberships.length > 1 && <Icon name="expand_more" size={16} className="text-muted" />}

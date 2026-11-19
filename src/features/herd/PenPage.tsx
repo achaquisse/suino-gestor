@@ -50,19 +50,15 @@ export default function PenPage() {
   return (
     <div className="flex flex-col gap-5">
       <Breadcrumbs items={[{ label: 'Animais', to: '/herd' }, { label: pen.name }]} />
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <IconTile icon={icon} bg={tint} fg={ink} size={52} iconSize={26} className="rounded-2xl" />
-          <div>
-            <h1 className="m-0 text-2xl font-semibold tracking-[-0.02em]">{pen.name}</h1>
-            <div className="flex flex-wrap items-center gap-1 text-ink-2">
-              {pen.kind}
-              {help.length > 0 && <span className="text-[#C9C9D6]">·</span>}
-              {help.map((h) => <HelpBtn key={h.to} h={h} size="sm" />)}
-            </div>
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <IconTile icon={icon} bg={tint} fg={ink} size={44} iconSize={24} className="shrink-0 rounded-[14px]" />
+          <div className="flex min-w-0 flex-col">
+            <h1 className="m-0 truncate text-2xl leading-tight font-semibold tracking-[-0.02em]">{pen.name}</h1>
+            <span className="truncate text-[13px] leading-tight text-muted">{pen.kind}</span>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {canEditHerd && !pen.blocked && <Button icon="add" onClick={() => openBuyAnimals(pen.id)}>Adicionar animais</Button>}
           {canEditHerd && <Button icon="move_down" onClick={() => openLog('transfer', { penId: pen.id })}>Transferir</Button>}
           {canEditHerd && <Button variant="soft" icon="vaccines" onClick={() => openLog('treatment', { penId: pen.id })}>Tratar curral</Button>}
@@ -94,6 +90,13 @@ export default function PenPage() {
           <div className="font-semibold">Curral vazio</div>
           <div className="text-sm text-muted">{pen.blocked ? 'Este curral está vedado e não recebe animais.' : 'Transfira animais, registe uma compra ou registe animais que já estão na granja.'}</div>
           {canEditHerd && !pen.blocked && <Button variant="soft" icon="add" onClick={() => openBuyAnimals(pen.id)}>Adicionar animais</Button>}
+        </Card>
+      )}
+
+      {help.length > 0 && (
+        <Card className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-5 py-3.5">
+          <span className="flex items-center gap-2 text-[13px] font-semibold text-ink-2"><Icon name="menu_book" size={18} className="text-faint" />Ajuda para este curral</span>
+          <div className="flex flex-wrap gap-0.5">{help.map((h) => <HelpBtn key={h.to} h={h} />)}</div>
         </Card>
       )}
     </div>

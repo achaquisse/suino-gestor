@@ -86,7 +86,7 @@ function OtherSaleForm({ ctx, onBack, onClose, modeSwitch }: FormProps & { modeS
         <div className="text-[13px] text-muted">Total da venda</div>
         <div className="tabular text-xl font-semibold text-success">{amount > 0 ? `+${money(amount)}` : '—'}</div>
       </div>
-      <CommonFields c={c} byLabel="Vendido por" />
+      <CommonFields c={c} />
     </FormSheet>
   )
 }
@@ -165,7 +165,7 @@ function AnimalSaleForm({ ctx, onBack, onClose, modeSwitch }: FormProps & { mode
         <div className="text-[13px] text-muted">Total da venda</div>
         <div className="tabular text-xl font-semibold text-success">{total ? `+${money(total)}` : '—'}</div>
       </div>
-      <CommonFields c={c} byLabel="Vendido por" />
+      <CommonFields c={c} />
     </FormSheet>
   )
 }

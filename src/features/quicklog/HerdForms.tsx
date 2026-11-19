@@ -72,7 +72,7 @@ export function TransferForm({ ctx, onBack, onClose }: FormProps) {
           {pens.filter((p) => p.id !== from && !p.blocked).map((p) => <option key={p.id} value={p.id}>{p.name} · {p.capacity == null ? 'sem limite' : `${p.capacity - count(p.id)} lugares livres`}</option>)}
         </Select>
       </Field>
-      <CommonFields c={c} byLabel="Responsável" />
+      <CommonFields c={c} />
     </FormSheet>
   )
 }
@@ -103,7 +103,7 @@ export function BirthForm({ ctx, onBack, onClose }: FormProps) {
         <Field label="Nascidos vivos"><Stepper value={live} onChange={setLive} max={30} /></Field>
         <Field label="Nados-mortos"><Stepper value={dead} onChange={setDead} max={30} /></Field>
       </div>
-      <CommonFields c={c} byLabel="Assistido por" />
+      <CommonFields c={c} />
     </FormSheet>
   )
 }
@@ -143,7 +143,7 @@ export function MatingForm({ ctx, onBack, onClose }: FormProps) {
           ) : <Input value={boar} onChange={(e) => setBoar(e.target.value)} placeholder="Identificação do varrasco" />}
         </Field>
       )}
-      <CommonFields c={c} byLabel="Registado por" />
+      <CommonFields c={c} />
     </FormSheet>
   )
 }
@@ -173,7 +173,7 @@ export function DeathForm({ ctx, onBack, onClose }: FormProps) {
       </div>
       {ctx.animalId ? <LockedAnimal animal={a} penName={penName(a?.pen_id ?? null)} /> : <AnimalSelect animals={list} penName={penName} value={animal} onChange={setAnimal} />}
       <Field label="Causa"><Input value={cause} onChange={(e) => setCause(e.target.value)} placeholder="Desconhecida" /></Field>
-      <CommonFields c={c} byLabel="Registado por" />
+      <CommonFields c={c} />
     </FormSheet>
   )
 }
@@ -206,7 +206,7 @@ export function ActivityForm({ ctx, onBack, onClose }: FormProps) {
           {pens.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </Select>
       </Field>
-      <CommonFields c={c} byLabel="Responsável" />
+      <CommonFields c={c} />
     </FormSheet>
   )
 }

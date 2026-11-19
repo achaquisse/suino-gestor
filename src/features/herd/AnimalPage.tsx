@@ -1,10 +1,10 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useUrlState } from '@/lib/urlState'
 import { useQuery } from '@tanstack/react-query'
 import { useFarm } from '@/app/farm'
 import { useOverlays } from '@/app/overlays'
-import { Breadcrumbs, Button, Card, Empty, ErrorState, Icon, IconButton, IconTile, Loading, Tabs, cx, usePopover } from '@/ui'
+import { Breadcrumbs, Button, Card, Empty, ErrorState, Icon, IconButton, IconTile, Loading, Sheet, Tabs, cx, usePopover } from '@/ui'
 import { ACC, EV, GREEN, INK, SGL, TONE, type LogType } from '@/lib/constants'
 import type { EventKind, FarmEvent, Json } from '@/lib/database.types'
 import { useAnimal, useAnimalEvents, useParam, useWeights, signedUrl } from '@/lib/queries'
@@ -12,6 +12,7 @@ import { addDays, ageLabel, dLong, dShort, dTimeline, daysBetween, mon3, plural 
 import { CAT_HELP, art, isSow, nextEvent, parentTags, pb } from './lib'
 import { HelpBtn, useHerd } from './parts'
 import { AnimalPhotos } from './AnimalPhotos'
+import { LifeCycle } from './LifeCycle'
 
 const TLT: Record<'all' | 'health' | 'breeding' | 'task', string> = { all: 'Todos', health: 'Saúde', breeding: 'Reprodução', task: 'Maneio' }
 type Tab = 'resumo' | 'repro' | 'hist' | 'fotos'
@@ -24,9 +25,9 @@ const liveOf = (e: FarmEvent) => {
   return m ? +m[1] : null
 }
 
-function AnimalPhoto({ path }: { path: string | null }) {
+function AnimalPhoto({ path, className = 'absolute inset-0 size-full object-cover' }: { path: string | null; className?: string }) {
   const q = useQuery({ queryKey: ['animal-photo', path], queryFn: () => signedUrl('animal-photos', path!), enabled: !!path, staleTime: 30 * 60_000 })
-  if (q.data) return <img src={q.data} alt="" className="absolute inset-0 size-full object-cover" />
+  if (q.data) return <img src={q.data} alt="" className={className} />
   return <span className="absolute inset-0 grid place-items-center text-ghost"><Icon name="photo_camera" size={28} /></span>
 }
 
@@ -45,6 +46,7 @@ export default function AnimalPage() {
   const weaning = useParam('weaning_age_days', 21)
   const [tab, setTab] = useUrlState<Tab>('tab', 'resumo', TABS)
   const [tl, setTl] = useUrlState<keyof typeof TLT>('kind', 'all', Object.keys(TLT) as (keyof typeof TLT)[])
+  const [photoOpen, setPhotoOpen] = useState(false)
 
   const events = useMemo(() => eventsQ.data ?? [], [eventsQ.data])
   const weights = useMemo(() => weightsQ.data ?? [], [weightsQ.data])
@@ -99,7 +101,6 @@ export default function AnimalPage() {
     ['Curral', penName],
     ['Pais', animal.parents || '—'],
     ['Raça', animal.breed || '—'],
-    ...(animal.notes ? [['Notas', animal.notes]] : []),
   ]
   const repro = [
     ['Estado', animal.status],
@@ -137,7 +138,14 @@ export default function AnimalPage() {
       <Card className="flex flex-col gap-[18px] p-5">
         <div className="flex flex-wrap items-center gap-[18px]">
           <div className="relative size-[88px] shrink-0">
-            <div className="absolute inset-0 overflow-hidden rounded-[20px] border border-line bg-[#F3F3F9]"><AnimalPhoto path={animal.photo_path} /></div>
+            {animal.photo_path ? (
+              <button type="button" aria-label="Expandir foto" title="Expandir foto" onClick={() => setPhotoOpen(true)}
+                className="absolute inset-0 cursor-zoom-in overflow-hidden rounded-[20px] border border-line bg-[#F3F3F9] p-0">
+                <AnimalPhoto path={animal.photo_path} />
+              </button>
+            ) : (
+              <div className="absolute inset-0 overflow-hidden rounded-[20px] border border-line bg-[#F3F3F9]"><AnimalPhoto path={null} /></div>
+            )}
             {canEditHerd && (
               <button type="button" aria-label="Fotos" title="Fotos" onClick={() => setTab('fotos')}
                 className="absolute -right-1.5 -bottom-1.5 grid size-8 place-items-center rounded-full border-2 border-white bg-ink p-0 text-white shadow-[0_2px_8px_rgba(22,22,40,0.2)] hover:bg-accent-strong">
@@ -211,6 +219,19 @@ export default function AnimalPage() {
                 {facts.map(([k, v]) => (
                   <div key={k} className="flex justify-between gap-3 border-t border-divider py-2.5 text-sm"><span className="text-muted">{k}</span><span className="text-right font-medium">{v}</span></div>
                 ))}
+                <div className="flex flex-col gap-1 border-t border-divider py-2.5 text-sm">
+                  <span className="text-muted">Descrição e características</span>
+                  {animal.notes ? (
+                    <p className="m-0 font-medium whitespace-pre-line [overflow-wrap:anywhere]">{animal.notes}</p>
+                  ) : canEditHerd && !removed ? (
+                    <button type="button" onClick={() => openEditAnimal(animal.id)}
+                      className="flex h-8 items-center gap-1.5 self-start rounded-[10px] border-0 bg-transparent px-2 -ml-2 text-[13px] font-semibold text-accent-strong hover:bg-accent-tint">
+                      <Icon name="add" size={18} />Adicionar descrição
+                    </button>
+                  ) : (
+                    <span className="font-medium">—</span>
+                  )}
+                </div>
               </div>
             </Card>
             <Card className="flex flex-col gap-3 p-5">
@@ -239,6 +260,7 @@ export default function AnimalPage() {
               )}
             </Card>
           </div>
+          <LifeCycle animal={animal} weights={weights} />
           <Card className="flex flex-col gap-3 p-5">
             <h2 className="m-0 text-[15px] font-semibold">Família</h2>
             <div className="flex flex-wrap gap-2.5">
@@ -279,6 +301,12 @@ export default function AnimalPage() {
       )}
 
       {curTab === 'fotos' && <AnimalPhotos animal={animal} />}
+
+      <Sheet open={photoOpen && !!animal.photo_path} onClose={() => setPhotoOpen(false)} title={animal.tag} maxWidth={900}>
+        <div className="relative grid min-h-[200px] place-items-center overflow-hidden rounded-2xl bg-[#F3F3F9]">
+          <AnimalPhoto path={animal.photo_path} className="max-h-[75dvh] w-full object-contain" />
+        </div>
+      </Sheet>
 
       {curTab === 'hist' && (
         <Card className="flex flex-col gap-3.5 p-5">

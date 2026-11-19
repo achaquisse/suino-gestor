@@ -2,7 +2,7 @@ import { useId, useState, type ReactNode } from 'react'
 import { useFarm } from '@/app/farm'
 import type { LogContext } from '@/app/overlays'
 import { errorMessage } from '@/lib/supabase'
-import { useAnimals, usePens, useTableMutations, useTeamNames } from '@/lib/queries'
+import { useAnimals, usePens, useTableMutations } from '@/lib/queries'
 import { todayISO } from '@/lib/format'
 import type { Animal } from '@/lib/database.types'
 import { Button, Field, FormError, Icon, Input, Select, Sheet, cx, useToast } from '@/ui'
@@ -42,29 +42,15 @@ export function useBase() {
 
 export function useCommon(ctx: LogContext) {
   const { user } = useFarm()
-  const team = useTeam()
   const [date, setDate] = useState(ctx.day ?? todayISO())
-  const [by, setBy] = useState(user.name)
-  return { date, setDate, by, setBy, team }
+  return { date, setDate, by: user.name }
 }
 export type Common = ReturnType<typeof useCommon>
 
-function useTeam() {
-  const { user } = useFarm()
-  const names = useTeamNames()
-  return [...new Set([user.name, ...names])]
-}
-
-export function CommonFields({ c, byLabel }: { c: Common; byLabel: string }) {
-  const { user } = useFarm()
+export function CommonFields({ c }: { c: Common }) {
   return (
     <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
       <Field label="Data"><Input type="date" required value={c.date} onChange={(e) => c.setDate(e.target.value)} /></Field>
-      <Field label={byLabel}>
-        <Select required value={c.by} onChange={(e) => c.setBy(e.target.value)}>
-          {c.team.map((n) => <option key={n} value={n}>{n}{n === user.name ? ' (eu)' : ''}</option>)}
-        </Select>
-      </Field>
     </div>
   )
 }

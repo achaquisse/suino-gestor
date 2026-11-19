@@ -34,7 +34,7 @@ Feature: Animal management
   Scenario: Edit the notes of an animal
     When I open the animal "G-102"
     And I click the button "Editar"
-    And I fill "Notas" with "Comprado em Boane, dócil"
+    And I fill "Descrição e características" with "Comprado em Boane, dócil"
     And I submit the sheet with "Guardar alterações"
     Then I should see the toast "Animal actualizado"
     And I should see "Comprado em Boane, dócil"

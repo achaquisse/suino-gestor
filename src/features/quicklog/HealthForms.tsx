@@ -98,7 +98,7 @@ export function TreatmentForm({ ctx, onBack, onClose }: FormProps) {
           )}
         </div>
       </div>
-      <CommonFields c={c} byLabel="Aplicado por" />
+      <CommonFields c={c} />
     </FormSheet>
   )
 }
@@ -158,7 +158,7 @@ export function IllnessForm({ ctx, onBack, onClose }: FormProps) {
         <Toggle checked={iso} onChange={setIso} label="Isolar animal" />
       </div>
       <Field label="Notas"><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Opcional" /></Field>
-      <CommonFields c={c} byLabel="Registado por" />
+      <CommonFields c={c} />
     </FormSheet>
   )
 }
@@ -194,7 +194,7 @@ export function WeightForm({ ctx, onBack, onClose }: FormProps) {
           <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-muted">kg</span>
         </div>
       </Field>
-      <CommonFields c={c} byLabel="Pesado por" />
+      <CommonFields c={c} />
     </FormSheet>
   )
 }
