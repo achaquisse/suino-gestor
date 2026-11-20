@@ -36,9 +36,9 @@ function InviteSheet({ open, onClose }: { open: boolean; onClose: () => void }) 
       <div className="flex flex-col gap-3.5">
         <Field label="Nome"><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome completo" /></Field>
         <Field label="Email"><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nome@exemplo.com" /></Field>
-        <Field label="Função">
+        <Field label="Função" hint={role === 'owner' ? 'Acesso total, como o seu: vendas, finanças, equipa e definições. Pode também remover outros proprietários.' : undefined}>
           <Select value={role} onChange={(e) => setRole(e.target.value as Role)}>
-            {ROLES.filter((r) => r !== 'owner').map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+            {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
           </Select>
         </Field>
         <FormError>{error}</FormError>

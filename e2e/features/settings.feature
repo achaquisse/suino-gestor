@@ -58,6 +58,18 @@ Feature: Settings
     And I submit the sheet with "Convidar"
     Then I should see the toast "Convite enviado a Rita Vet"
 
+  @mutation @SET-08
+  Scenario: Invite another owner
+    Given I am signed in as the owner
+    When I open "/settings"
+    And I click the button "Convidar"
+    And I fill "Nome" with "Sócia E2E"
+    And I fill "Email" with "socia.e2e@suinogestor.test"
+    And I select "Proprietário" in "Função"
+    Then I should see "Acesso total, como o seu"
+    When I submit the sheet with "Convidar"
+    Then I should see the toast "Convite enviado a Sócia E2E"
+
   @mutation @SET-06
   Scenario: Register a pen with a role, no capacity limit and closed for use
     Given I am signed in as the owner

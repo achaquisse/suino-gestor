@@ -138,6 +138,7 @@ Test data: the isolated demo farm created at bootstrap (same seed as `seed_demo`
 | SET-05 | P2 | Invite a team member | Convidar → name, email, role → Convidar | Toast "Convite enviado a …" |
 | SET-06 | P1 | Register a pen | Currais → Novo curral → name, Quarentena, Vedado + motivo → Guardar | "Curral criado"; listed as "Quarentena · Obras" with the Vedado chip |
 | SET-07 | P2 | Caretaker pen layout is read-only | Caretaker opens Currais | Layout shown; no "Novo curral" |
+| SET-08 | P2 | Invite another owner | Convidar → name, email, role Proprietário → Convidar | Owner hint shown; toast "Convite enviado a …" |
 
 **Totals:** 78 cases: 74 core, 4 `@future` (NAV-06, HERD-08, LOG-04, LOG-15).
 
