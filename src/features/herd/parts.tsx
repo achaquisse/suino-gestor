@@ -41,7 +41,7 @@ export function Kpi({ label, value, sub, icon, bg, fg, valueColor, onClick, acti
 }
 
 export const KpiGrid = ({ children }: { children: ReactNode }) => (
-  <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr))]">{children}</div>
+  <div className="grid grid-cols-2 gap-3 wide:[grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">{children}</div>
 )
 
 export function StatusChip({ a, className }: { a: HA; className?: string }) {

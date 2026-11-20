@@ -47,7 +47,7 @@ Feature: Stock
   @STK-05
   Scenario: The movement history lists the opening balances
     Given I am signed in as the owner
-    When I open "/stock?tab=movimentos"
+    When I open "/stock?tab=moves"
     Then I should see "Stock inicial"
 
   @mutation @STK-06
@@ -65,7 +65,7 @@ Feature: Stock
     When I fill "Fornecedor" with "Agro-Teste"
     And I submit the sheet with "Registar"
     Then I should see "Compra registada"
-    When I open "/money"
+    When I open "/expenses"
     Then I should see "Desinfectante · 2 L · Agro-Teste"
 
   @mutation @STK-07

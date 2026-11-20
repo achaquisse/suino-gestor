@@ -133,6 +133,6 @@ Feature: Platform administration
     Then I should see "Criou granja"
     And I should be on a page whose URL contains "op=insert"
     When I filter the activity by "Mais antigas" in "Ordenar"
-    Then I should be on a page whose URL contains "ordem=old"
+    Then I should be on a page whose URL contains "sort=old"
     When I search the activity for "nada-assim-xyz"
     Then I should see "Nenhuma operação encontrada"

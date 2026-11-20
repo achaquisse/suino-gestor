@@ -73,6 +73,17 @@ export function useUrlState<T extends string = string>(key: string, def: NoInfer
   return [value, (v: T) => setUrlParams({ [key]: v === def ? null : v })]
 }
 
+/** Reads a URL slug back to its internal value (or null when unknown). */
+export function fromSlug<T extends string>(slugs: Readonly<Record<T, string>>, raw: string | null): T | null {
+  return raw == null ? null : (Object.keys(slugs) as T[]).find((k) => slugs[k] === raw) ?? null
+}
+
+/** Like useUrlState, but the URL holds an English slug for each internal value (codes or Portuguese data values). */
+export function useUrlEnum<T extends string>(key: string, def: NoInfer<T>, slugs: Readonly<Record<T, string>>): [T, (v: T) => void] {
+  const value = fromSlug(slugs, useUrlParams().get(key)) ?? def
+  return [value, (v: T) => setUrlParams({ [key]: v === def ? null : slugs[v] })]
+}
+
 export function useUrlNumber(key: string, def: number): [number, (v: number) => void] {
   const n = Number(useUrlParams().get(key))
   const value = Number.isFinite(n) && n > 0 ? Math.floor(n) : def

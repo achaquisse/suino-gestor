@@ -1,5 +1,5 @@
 import { Link } from 'react-router'
-import { useUrlState } from '@/lib/urlState'
+import { useUrlEnum, useUrlState } from '@/lib/urlState'
 import { HCAT } from '@/lib/constants'
 import type { HelpCategory } from '@/lib/database.types'
 import { Button, Card, ErrorState, Icon, IconTile, Loading, Spinner, cx, useToast } from '@/ui'
@@ -8,10 +8,12 @@ import { useHelpLibrary, useHelpSearch } from './queries'
 
 type Filter = 'all' | HelpCategory
 
+const CAT_SLUG: Record<Filter, string> = { all: 'all', Saúde: 'health', Reprodução: 'breeding', Alimentação: 'feeding', Maneio: 'management', 'Usar o Suino Gestor': 'using-the-app' }
+
 export default function HelpPage() {
   const toast = useToast()
   const [q, setQ] = useUrlState('q', '')
-  const [cat, setCat] = useUrlState<Filter>('cat', 'all', ['all', ...HELP_CATS])
+  const [cat, setCat] = useUrlEnum<Filter>('cat', 'all', CAT_SLUG)
   useHelpLibrary()
   const search = useHelpSearch(q, cat === 'all' ? null : cat)
   const res = search.data

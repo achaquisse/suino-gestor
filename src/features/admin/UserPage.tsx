@@ -7,6 +7,7 @@ import type { AdminUser, AuditAction, AuditEntry, Json } from '@/lib/database.ty
 import { dLong, initials, isoOf } from '@/lib/format'
 import { errorMessage, supabase } from '@/lib/supabase'
 import { setUrlParams, useUrlNumber, useUrlState } from '@/lib/urlState'
+import { usePageTitle } from '@/lib/title'
 import { Avatar, Breadcrumbs, Button, Card, Chip, ConfirmSheet, Empty, ErrorState, IconTile, Loading, Logo, Pager, SearchInput, Select, Spinner, useToast } from '@/ui'
 import { useAdminUsers } from './AdminPage'
 
@@ -62,8 +63,8 @@ function Activity({ userId }: { userId: string }) {
   const [open, setOpen] = useState<number | null>(null)
   const [q, setQ] = useUrlState('q', '')
   const [action] = useUrlState<'' | AuditAction>('op', '', ['', 'insert', 'update', 'delete'])
-  const [entity] = useUrlState('tipo', '')
-  const [sort] = useUrlState<Sort>('ordem', 'new', ['new', 'old', 'entity'])
+  const [entity] = useUrlState('entity', '')
+  const [sort] = useUrlState<Sort>('sort', 'new', ['new', 'old', 'entity'])
   const [page, setPage] = useUrlNumber('page', 1)
   const [per] = useUrlNumber('per', 25)
   const reset = (patch: Record<string, string | null>) => setUrlParams({ ...patch, page: null })
@@ -96,11 +97,11 @@ function Activity({ userId }: { userId: string }) {
           <Select aria-label="Operação" className="!w-auto" value={action} onChange={(e) => reset({ op: e.target.value || null })}>
             {ACTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </Select>
-          <Select aria-label="Tipo de registo" className="!w-auto max-w-full" value={entity} onChange={(e) => reset({ tipo: e.target.value || null })}>
+          <Select aria-label="Tipo de registo" className="!w-auto max-w-full" value={entity} onChange={(e) => reset({ entity: e.target.value || null })}>
             <option value="">Todos os registos</option>
             {Object.entries(ENTITY).sort((x, y) => x[1].localeCompare(y[1])).map(([v, l]) => <option key={v} value={v}>{l[0].toUpperCase() + l.slice(1)}</option>)}
           </Select>
-          <Select aria-label="Ordenar" className="!w-auto" value={sort} onChange={(e) => reset({ ordem: e.target.value === 'new' ? null : e.target.value })}>
+          <Select aria-label="Ordenar" className="!w-auto" value={sort} onChange={(e) => reset({ sort: e.target.value === 'new' ? null : e.target.value })}>
             {SORTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </Select>
         </div>
@@ -146,9 +147,10 @@ export default function UserPage() {
   const { userId = '' } = useParams()
   const users = useAdminUsers()
   const navigate = useNavigate()
-  const back = () => navigate('/admin?tab=utilizadores')
+  const back = () => navigate('/admin?tab=users')
   const user = users.data?.find((u) => u.id === userId)
   const userName = user ? user.name || user.email.split('@')[0] : users.isPending ? '…' : 'Utilizador'
+  usePageTitle(user ? `${userName} · Utilizadores` : null)
 
   return (
     <div className="app-bg min-h-dvh">
@@ -156,7 +158,7 @@ export default function UserPage() {
         <header className="flex flex-wrap items-center gap-3">
           <Logo size={40} className="rounded-[12px] shadow-[0_4px_12px_rgba(91,76,240,0.3)]" />
           <div className="min-w-0 flex-1">
-            <Breadcrumbs items={[{ label: 'Administração', to: '/admin' }, { label: 'Utilizadores', to: '/admin?tab=utilizadores' }, { label: userName }]} />
+            <Breadcrumbs items={[{ label: 'Administração', to: '/admin' }, { label: 'Utilizadores', to: '/admin?tab=users' }, { label: userName }]} />
           </div>
           <Button icon="arrow_back" onClick={back}>Utilizadores</Button>
         </header>

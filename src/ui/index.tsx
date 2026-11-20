@@ -16,7 +16,7 @@ export function Icon({ name, size = 20, fill = false, className, style }: { name
   return (
     <span
       aria-hidden
-      className={cx('font-icon inline-block shrink-0 select-none leading-none', className)}
+      className={cx('font-icon inline-block shrink-0 select-none font-normal leading-none [font-synthesis:none]', className)}
       style={{ fontSize: size, width: size, height: size, fontVariationSettings: `'FILL' ${fill ? 1 : 0}`, ...style }}
     >
       {name}
@@ -484,3 +484,4 @@ export function HelpLinks({ links, className }: { links: { label: string; to: st
   )
 }
 export { Logo, PigFace } from './Logo'
+export { Credits, DEVELOPER } from './Credits'

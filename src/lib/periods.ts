@@ -1,18 +1,18 @@
 import { addMonths, dISO, todayISO } from './format'
 
 /** Date presets shared by Despesas and Relatórios. */
-export type PresetKey = 'mes' | 'mes-1' | 'mes-2' | 'semestre' | 'ano' | 'ano-1' | 'tudo'
+export type PresetKey = 'this-month' | 'last-month' | 'two-months-ago' | 'this-half' | 'this-year' | 'last-year' | 'all-time'
 
-export const DEFAULT_PERIOD: PresetKey = 'mes'
+export const DEFAULT_PERIOD: PresetKey = 'this-month'
 
 export const PERIODS: readonly (readonly [PresetKey, string])[] = [
-  ['mes', 'Este mês'],
-  ['mes-1', 'Mês passado'],
-  ['mes-2', 'Mês antepassado'],
-  ['semestre', 'Este semestre'],
-  ['ano', 'Este ano'],
-  ['ano-1', 'Ano passado'],
-  ['tudo', 'Desde o início até hoje'],
+  ['this-month', 'Este mês'],
+  ['last-month', 'Mês passado'],
+  ['two-months-ago', 'Mês antepassado'],
+  ['this-half', 'Este semestre'],
+  ['this-year', 'Este ano'],
+  ['last-year', 'Ano passado'],
+  ['all-time', 'Desde o início até hoje'],
 ]
 
 export const isPreset = (v: string | null): v is PresetKey => PERIODS.some(([k]) => k === v)
@@ -28,13 +28,13 @@ export function presetRange(key: PresetKey, start?: string | null, today = today
   const m = +today.slice(5, 7)
   const thisMonth = `${today.slice(0, 8)}01`
   switch (key) {
-    case 'mes': return [thisMonth, today]
-    case 'mes-1': { const f = addMonths(thisMonth, -1); return [f, monthEnd(f)] }
-    case 'mes-2': { const f = addMonths(thisMonth, -2); return [f, monthEnd(f)] }
-    case 'semestre': return [m <= 6 ? `${y}-01-01` : `${y}-07-01`, today]
-    case 'ano': return [`${y}-01-01`, today]
-    case 'ano-1': return [`${y - 1}-01-01`, `${y - 1}-12-31`]
-    case 'tudo': return [start && start < today ? start : `${y}-01-01`, today]
+    case 'this-month': return [thisMonth, today]
+    case 'last-month': { const f = addMonths(thisMonth, -1); return [f, monthEnd(f)] }
+    case 'two-months-ago': { const f = addMonths(thisMonth, -2); return [f, monthEnd(f)] }
+    case 'this-half': return [m <= 6 ? `${y}-01-01` : `${y}-07-01`, today]
+    case 'this-year': return [`${y}-01-01`, today]
+    case 'last-year': return [`${y - 1}-01-01`, `${y - 1}-12-31`]
+    case 'all-time': return [start && start < today ? start : `${y}-01-01`, today]
   }
 }
 

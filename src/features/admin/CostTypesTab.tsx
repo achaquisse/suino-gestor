@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useUrlState } from '@/lib/urlState'
+import { useUrlEnum, useUrlState } from '@/lib/urlState'
 import { errorMessage } from '@/lib/supabase'
 import type { Category, CategoryGroup } from '@/lib/database.types'
 import { SWATCH } from '@/lib/constants'
@@ -74,7 +74,7 @@ export default function CostTypesTab({ farmId }: { farmId: string }) {
   const { update } = useFarmTableMutations(farmId, 'categories')
   const toast = useToast()
   const [q, setQ] = useUrlState('q', '')
-  const [grp, setGrp] = useUrlState('group', 'all')
+  const [grp, setGrp] = useUrlEnum<CategoryGroup | 'all'>('group', 'all', { all: 'all', Investimento: 'investment', Operacional: 'operational', Receita: 'income', Dívida: 'debt' })
   const [draft, setDraft] = useState<Draft | null>(null)
   const [off, setOff] = useState<Category | null>(null)
 
@@ -95,7 +95,7 @@ export default function CostTypesTab({ farmId }: { farmId: string }) {
   return (
     <>
       <DataTable title="Tipos financeiros" sub="Categorias usadas nas despesas e receitas" addLabel="Novo tipo" onAdd={() => setDraft(blank)}
-        search={q} onSearch={setQ} filter={{ value: grp, onChange: setGrp, options: [['all', 'Todos os grupos'], ...GROUPS.map((g) => [g, g] as const)] }}
+        search={q} onSearch={setQ} filter={{ value: grp, onChange: (v) => setGrp(v as CategoryGroup), options: [['all', 'Todos os grupos'], ...GROUPS.map((g) => [g, g] as const)] }}
         rows={rows} cols={cols} readOnly={false} dim={(c) => !c.active} emptyMsg="Nenhum tipo encontrado" minW={760}
         onEdit={(c) => setDraft({ id: c.id, name: c.name, grp: c.grp, color: c.color, description: c.description, item_type: c.item_type, quantity_unit: c.quantity_unit, quantity_unit_singular: c.quantity_unit_singular, baseline_price: c.baseline_price == null ? '' : String(c.baseline_price), active: c.active })}
         onDelete={(c) => c.active ? setOff(c) : update.mutate({ id: c.id, active: true }, { onSuccess: () => toast('Tipo reactivado'), onError: (e) => toast(errorMessage(e), 'error') })} />

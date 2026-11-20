@@ -7,19 +7,19 @@ import PensTab from './PensTab'
 import AccountsTab from './AccountsTab'
 import ParamsTab from './ParamsTab'
 
-type Tab = 'geral' | 'currais' | 'contas' | 'params'
+type Tab = 'general' | 'pens' | 'accounts' | 'params'
 
 export default function SettingsPage() {
   const { canSeeMoney } = useFarm()
-  const [tab] = useUrlState<Tab>('tab', 'geral', ['geral', 'currais', 'contas', 'params'])
-  const setTab = (t: Tab) => setUrlParams({ tab: t === 'geral' ? null : t, q: null, group: null, kind: null, page: null, per: null })
+  const [tab] = useUrlState<Tab>('tab', 'general', ['general', 'pens', 'accounts', 'params'])
+  const setTab = (t: Tab) => setUrlParams({ tab: t === 'general' ? null : t, q: null, group: null, kind: null, page: null, per: null })
   const tabs: [Tab, string, string][] = [
-    ['geral', 'Geral', 'tune'],
-    ['currais', 'Currais', 'fence'],
-    ...(canSeeMoney ? ([['contas', 'Contas', 'account_balance']] as [Tab, string, string][]) : []),
+    ['general', 'Geral', 'tune'],
+    ['pens', 'Currais', 'fence'],
+    ...(canSeeMoney ? ([['accounts', 'Contas', 'account_balance']] as [Tab, string, string][]) : []),
     ['params', 'Parâmetros', 'settings_suggest'],
   ]
-  const active = tabs.some(([v]) => v === tab) ? tab : 'geral'
+  const active = tabs.some(([v]) => v === tab) ? tab : 'general'
 
   return (
     <div className="flex flex-col gap-5">
@@ -35,9 +35,9 @@ export default function SettingsPage() {
           ))}
         </div>
       </header>
-      {active === 'geral' && <GeneralTab />}
-      {active === 'currais' && <PensTab />}
-      {active === 'contas' && <AccountsTab />}
+      {active === 'general' && <GeneralTab />}
+      {active === 'pens' && <PensTab />}
+      {active === 'accounts' && <AccountsTab />}
       {active === 'params' && <ParamsTab />}
     </div>
   )

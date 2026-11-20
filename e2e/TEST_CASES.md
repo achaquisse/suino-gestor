@@ -13,7 +13,7 @@ Test data: the isolated demo farm created at bootstrap (same seed as `seed_demo`
 | AUTH-01 | P1 | Login screen renders | Open app signed out | "Bem-vindo ao Suino Gestor" and a "Continuar com Google" button are shown |
 | AUTH-02 | P1 | Sign in with a dev account | Click "Continuar com Google" → pick *Carlos Nhantumbo* in the dev picker | App opens on `/herd` with the main navigation |
 | AUTH-03 | P1 | Sign out | Signed in as Owner → user menu → "Terminar sessão" | Login screen with "Sessão terminada com sucesso." |
-| AUTH-04 | P2 | Deep link while signed out | Open `/money` signed out | Login screen is shown, finance data is not |
+| AUTH-04 | P2 | Deep link while signed out | Open `/expenses` signed out | Login screen is shown, finance data is not |
 
 ## Onboarding — `features/onboarding.feature`
 
@@ -28,7 +28,7 @@ Test data: the isolated demo farm created at bootstrap (same seed as `seed_demo`
 | --- | --- | --- | --- | --- |
 | NAV-01 | P1 | Owner sees the full navigation | Sign in as Owner | Nav shows Animais, Stock, Despesas, Relatórios, Ajuda |
 | NAV-02 | P1 | Caretaker sees only field navigation | Sign in as Caretaker | Nav shows Animais, Stock, Ajuda; no Despesas or Relatórios |
-| NAV-03 | P1 | Caretaker cannot open finance pages by URL | Caretaker opens `/money`, then `/reports` | "Sem acesso às despesas" / "Sem acesso" |
+| NAV-03 | P1 | Caretaker cannot open finance pages by URL | Caretaker opens `/expenses`, then `/reports` | "Sem acesso às despesas" / "Sem acesso" |
 | NAV-04 | P2 | Unknown route | Open `/does-not-exist` | "Página não encontrada" |
 | NAV-05 | P2 | Switch farm | Owner → user menu → second farm | Toast "Mudou para …"; header shows the second farm |
 | NAV-06 | P2 | `@future` Today dashboard is the home page | Open `/` | Stays on `/` and shows the "Hoje" dashboard with tasks (README: Today at `/`; NotFound links to "Voltar a Hoje") |
@@ -40,7 +40,7 @@ Test data: the isolated demo farm created at bootstrap (same seed as `seed_demo`
 | HERD-01 | P1 | Herd KPIs | Open `/herd` | "Animais" KPI equals the live animals in the farm (DB oracle); "8 currais" |
 | HERD-02 | P1 | Search by ear tag | Search "S-009" | List "Resultados para “S-009”" with 1 animal, S-009 |
 | HERD-03 | P2 | Search without matches | Search "ZZZ-999" | "0 animais" |
-| HERD-04 | P2 | Breeders KPI filter | Click "Reprodutoras" KPI | URL has `stage=rep`; list count equals the KPI value |
+| HERD-04 | P2 | Breeders KPI filter | Click "Reprodutoras" KPI | URL has `stage=breeders`; list count equals the KPI value |
 | HERD-05 | P1 | Open a pen | Click pen "Maternidade A" | Pen page with heading, "Ocupação" KPI and "Animais no curral" |
 | HERD-06 | P1 | Open an animal | Open `/herd/animals/S-009` | Heading S-009, "Porca", "Dados do animal" |
 | HERD-07 | P3 | Unknown animal | Open `/herd/animals/NOPE-1` | "Animal não encontrado" |
@@ -85,12 +85,12 @@ Test data: the isolated demo farm created at bootstrap (same seed as `seed_demo`
 
 | ID | P | Title | Steps | Expected result |
 | --- | --- | --- | --- | --- |
-| MON-01 | P1 | Expenses page | Owner opens `/money` | Heading "Despesas", "Compromissos", "Nova despesa"; no "Resultado" or "Receita vs despesas" |
+| MON-01 | P1 | Expenses page | Owner opens `/expenses` | Heading "Despesas", "Compromissos", "Nova despesa"; no "Resultado" or "Receita vs despesas" |
 | MON-02 | P1 | Record an expense | Nova despesa → Veterinário → 1500 → description → Registar despesa | Toast "Despesa registada"; found by searching the movements |
 | MON-03 | P2 | Expense needs a positive amount | Nova despesa → Veterinário → 0 → Registar despesa | "Indique um valor numérico maior que zero." |
-| MON-04 | P1 | Investor is read-only | Investor opens `/money` | Expenses are visible; no "Nova despesa" button |
+| MON-04 | P1 | Investor is read-only | Investor opens `/expenses` | Expenses are visible; no "Nova despesa" button |
 | MON-05 | P2 | Expense-only sheet | Nova despesa | Sheet "Nova despesa" with "Registar despesa"; no "Receita" option (income comes from Venda) |
-| MON-06 | P2 | Money date presets | Open `/money` → "Este mês" by default → Mês passado → Desde o início até hoje | URL `period=mes-1`, then `period=tudo` |
+| MON-06 | P2 | Money date presets | Open `/expenses` → "Este mês" by default → Mês passado → Desde o início até hoje | URL `period=last-month`, then `period=all-time` |
 | MON-07 | P1 | Stock category needs an item | Nova despesa → Ração → 2 sacos → Registar despesa | "Escolha o artigo de stock desta despesa, ou crie um novo." |
 | MON-08 | P1 | Create the item while buying it | Nova despesa → Ração → + Criar novo artigo → name, 3 sacos × 700 → Registar despesa | "Despesa registada"; `/stock` lists the item with 3 sacos |
 
@@ -99,11 +99,11 @@ Test data: the isolated demo farm created at bootstrap (same seed as `seed_demo`
 | ID | P | Title | Steps | Expected result |
 | --- | --- | --- | --- | --- |
 | REP-01 | P1 | Summary statement | Owner opens `/reports` | "Demonstração de resultados" |
-| REP-02 | P2 | Change period | Click "Este ano" | URL has `period=ano` |
+| REP-02 | P2 | Change period | Click "Este ano" | URL has `period=this-year` |
 | REP-03 | P2 | Export CSV | Click "Exportar" → "Excel" | A `relatorio-*.csv` file is downloaded |
 | REP-04 | P1 | Stock section | Open `/reports` (single page, no tabs) | "Compras e consumo ao longo do tempo" chart and "Movimento por artigo" table |
 | REP-05 | P2 | Export the stock report | Exportar → Stock (Excel) | File `relatorio-stock-….csv` |
-| REP-06 | P2 | Date presets | Pick Mês passado, Mês antepassado, Este semestre, Ano passado, Desde o início até hoje | URL `period=` mes-1, mes-2, semestre, ano-1, tudo |
+| REP-06 | P2 | Date presets | Pick Mês passado, Mês antepassado, Este semestre, Ano passado, Desde o início até hoje | URL `period=` last-month, two-months-ago, this-half, last-year, all-time |
 
 ## Stock — `features/stock.feature`
 
@@ -113,8 +113,8 @@ Test data: the isolated demo farm created at bootstrap (same seed as `seed_demo`
 | STK-02 | P1 | Caretaker records movements only | Caretaker opens `/stock` | "Registar movimento" shown, "Registar artigo" hidden |
 | STK-03 | P2 | Record an entry | Registar movimento → Desinfectante, 3 L, Doação → Registar | "Entrada registada" toast |
 | STK-04 | P2 | Exit above the stock is refused | Registar movimento → Saída → Ivermectina 99999 → Registar | Sheet shows an error |
-| STK-05 | P2 | Movement history | Open `/stock?tab=movimentos` | Opening balances ("Stock inicial") listed |
-| STK-06 | P1 | Purchase entry records the expense | Registar movimento → Desinfectante, 2 L, Compra → default 150 MT/L shown → change to 175 → Agro-Teste → Registar | Total −350 MT; "Compra registada"; `/money` lists "Desinfectante · 2 L · Agro-Teste" |
+| STK-05 | P2 | Movement history | Open `/stock?tab=moves` | Opening balances ("Stock inicial") listed |
+| STK-06 | P1 | Purchase entry records the expense | Registar movimento → Desinfectante, 2 L, Compra → default 150 MT/L shown → change to 175 → Agro-Teste → Registar | Total −350 MT; "Compra registada"; `/expenses` lists "Desinfectante · 2 L · Agro-Teste" |
 | STK-07 | P1 | Register an item | Registar artigo → no Código/Nota fields → Farelo E2E, Ração · sacos, 1, 60 days → Guardar | Unit shown read-only ("saco"); "Artigo registado"; listed as "1 saco" |
 
 ## Help — `features/help.feature`

@@ -4,7 +4,7 @@
   "short_name": "Suino Gestor",
   "description": "Gestão de granjas de suínos: animais, tarefas, finanças e relatórios.",
   "lang": "pt",
-  "start_url": "/",
+  "start_url": "/herd",
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
@@ -26,7 +26,8 @@
     { "src": "/screenshots/wide-money.png", "sizes": "1280x800", "type": "image/png", "form_factor": "wide", "label": "Finanças da granja" }
   ],
   "shortcuts": [
-    { "name": "Hoje", "url": "/", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Animais", "url": "/herd", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+    { "name": "Animais", "short_name": "Animais", "url": "/herd", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Stock", "short_name": "Stock", "url": "/stock", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Despesas", "short_name": "Despesas", "url": "/expenses", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
   ]
 }

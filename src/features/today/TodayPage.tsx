@@ -79,7 +79,7 @@ export default function TodayPage() {
               </span>
             </StatTile>
             {canSeeMoney && (
-              <StatTile onClick={() => nav('/money')}>
+              <StatTile onClick={() => nav('/expenses')}>
                 <span className="text-[13px] text-muted">Caixa · {monthName}</span>
                 <div className="tabular flex flex-col gap-0.5 text-sm">
                   <span className="flex justify-between gap-2"><span className="text-muted">Entradas</span><span>{fmt(cash.inT)}</span></span>

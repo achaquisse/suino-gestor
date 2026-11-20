@@ -30,15 +30,38 @@ Each farm is a separate tenant with its own users, roles and data. One person ca
 
 A bottom tab bar on mobile (sidebar on desktop) and a floating **+** button for quick logging from anywhere.
 
-| Screen       | Path        | What the user sees                                                                                    |
-| ------------ | ----------- | ----------------------------------------------------------------------------------------------------- |
-| **Today**    | `/`         | Tasks due and overdue, alerts, stock levels and the calendar                                          |
-| **Herd**     | `/herd`     | Pens with occupancy → pen detail → animal timeline (birth, weights, treatments, moves, outcome)       |
-| **Money**    | `/money`    | Transactions, funding accounts and splits, recurring expenses, debts and commitments                  |
-| **Reports**  | `/reports`  | Summary, cash flow, spend by category, per-account detail and per-batch results                       |
-| **Help**     | `/help`     | Playbooks for common scenarios (heat, farrowing, illness, injuries) and reference articles            |
-| **Settings** | `/settings` | Farm details, funding accounts, categories, parameters and team                                       |
-| **Quick log (+)** | —      | Herd, health and money forms in one sheet, prefilled from context                                     |
+| Screen            | Path                                            | What the user sees                                                                              |
+| ----------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| **Herd** (home)   | `/herd`                                         | Pens with occupancy, farm layout, animals needing attention and the filterable animal list      |
+| **Pen**           | `/herd/pens/:penId`                             | Occupancy, the animals in the pen (sortable by column) and help for that pen                    |
+| **Animal**        | `/herd/animals/:tag`                            | Summary with the growth chart, breeding, history timeline and dated photos                     |
+| **Stock**         | `/stock`                                        | Items with stock levels and expiry, and the movement history                                    |
+| **Expenses**      | `/expenses`                                     | Expenses, funding accounts and splits, recurring expenses, debts and commitments                |
+| **Reports**       | `/reports`                                      | Summary, cash flow, spend by category, per-account detail, per-batch results and stock          |
+| **Help**          | `/help`, `/help/playbooks/:id`, `/help/articles/:id` | Playbooks for common scenarios (heat, farrowing, illness, injuries) and reference articles |
+| **Settings**      | `/settings`                                     | Farm details and team, pens, funding accounts and parameters                                    |
+| **Admin**         | `/admin`, `/admin/users/:userId`                | Super admin only: farms, cost types, catalogs, users and their activity                         |
+| **Quick log (+)** | —                                               | Herd, health and money forms in one sheet, prefilled from context                               |
+
+`/` opens `/herd`. Old paths (`/money`, `/admin/utilizadores/:id`) redirect to the new ones and keep their query string.
+
+### URLs and page titles
+
+Paths and query parameters are in English; screen text stays in Portuguese. Filters, tabs, sorting and paging live in the query string, so any view can be bookmarked or shared. Defaults are left out of the URL.
+
+| Screen    | Query parameters                                                                                                         |
+| --------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Herd      | `q`, `stage` (`breeders`, `piglets`, `nursery`, `growers`, `finishers`, `boars`), `status` (`attention`, `sick`, `medication`, `heat`, `farrowing`, `withdrawal`), `attn`, `sort` + `dir`, `page`, `per` |
+| Pen       | `sort` (`tag`, `stage`, `sex`, `age`, `kg`, `pen`, `parents`, `status`) + `dir` (`asc`, `desc`), `page`, `per`            |
+| Animal    | `tab` (`summary`, `breeding`, `history`, `photos`), `kind`                                                               |
+| Stock     | `tab` (`items`, `moves`), `status` (`low`, `expiring`, `inactive`), `item`, `type` (`in`, `out`), `q`                     |
+| Expenses  | `period`, `from`, `to`, `acct`, `cat`, `q`, `sort`, `group` (`investment`, `operational`), `commit` (`rec`, `debt`)       |
+| Reports   | `period` (`this-month`, `last-month`, `two-months-ago`, `this-half`, `this-year`, `last-year`, `all-time`, or `custom` with `from` and `to`), `acct` |
+| Help      | `q`, `cat` (`health`, `breeding`, `feeding`, `management`, `using-the-app`)                                              |
+| Settings  | `tab` (`general`, `pens`, `accounts`, `params`), `q`, `group`, `kind`                                                    |
+| Admin     | `tab` (`farms`, `cost-types`, `catalogs`, `users`), `farm`, `new`; user page: `q`, `op`, `entity`, `sort`                |
+
+Each route sets the browser title through its `handle.title` in `src/app/router.tsx` (e.g. "Despesas · Suino Gestor"); detail pages override it with `usePageTitle` from `src/lib/title.ts` (e.g. "S-014 · Porca · Suino Gestor").
 
 The UI implements the Claude Design mockup in `mockup/Suino Gestor v5.dc.html`.
 
@@ -106,3 +129,7 @@ The [React Compiler](https://react.dev/learn/react-compiler) runs at build time 
 The React Query cache is persisted to IndexedDB (`src/lib/queryClient.ts`) for up to 7 days, so the last-synced farm data shows without a connection. It is wiped on sign-out and whenever the app starts without a valid session. Bump `buster` there when cached row shapes change.
 
 Writes still need a connection: saving offline fails straight away with "Sem ligação à internet", and nothing is queued.
+
+## Author
+
+Developed by **Américo Chaquisse**: [LinkedIn](https://www.linkedin.com/in/achaquisse/) · [GitHub](https://github.com/achaquisse). The credit also appears on the sign-in screen and at the bottom of the user menu.

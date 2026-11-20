@@ -30,6 +30,6 @@ Feature: Authentication
   @AUTH-04
   Scenario: A deep link while signed out shows the login screen
     Given I am signed out
-    When I open "/money"
+    When I open "/expenses"
     Then I should see "Bem-vindo ao Suino Gestor"
     And I should not see "Movimentos"

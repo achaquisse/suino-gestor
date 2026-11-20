@@ -55,6 +55,8 @@ export type InstallState = {
 
 const DISMISS_KEY = 'pf-install-dismissed'
 const DISMISS_MS = 14 * 24 * 60 * 60 * 1000
+const VISITS_KEY = 'pf-visits'
+const SESSION_KEY = 'pf-session'
 let deferredPrompt: BeforeInstallPromptEvent | null = null
 const installListeners = new Set<() => void>()
 const emitInstall = () => { installState = readInstallState(); installListeners.forEach((l) => l()) }
@@ -75,7 +77,27 @@ const readInstallState = (): InstallState => ({
 })
 let installState: InstallState = readInstallState()
 
+const visits = () => Number(localStorage.getItem(VISITS_KEY) || 0)
+
+// The install banner waits for a returning visitor (or some time on the page) instead of greeting first-time users.
+export const returningVisitor = () => visits() >= 2
+
+// Chrome, Edge and Firefox on iOS 16.4+ can also add to the home screen, from their own share button.
+export const iosBrowser = (): 'safari' | 'chrome' | 'edge' | 'firefox' => {
+  const ua = navigator.userAgent
+  if (/CriOS/.test(ua)) return 'chrome'
+  if (/EdgiOS/.test(ua)) return 'edge'
+  if (/FxiOS/.test(ua)) return 'firefox'
+  return 'safari'
+}
+
 export function listenForInstallPrompt() {
+  try {
+    if (!sessionStorage.getItem(SESSION_KEY)) {
+      sessionStorage.setItem(SESSION_KEY, '1')
+      localStorage.setItem(VISITS_KEY, String(visits() + 1))
+    }
+  } catch { /* storage unavailable (private mode) */ }
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault()
     deferredPrompt = e as BeforeInstallPromptEvent

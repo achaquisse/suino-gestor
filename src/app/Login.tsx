@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Icon, IconTile, Logo, Sheet, Spinner } from '@/ui'
+import { useEffect, useState } from 'react'
+import { Credits, Icon, IconTile, Logo, Sheet, Spinner } from '@/ui'
 import { errorMessage, supabase, supabaseConfigured } from '@/lib/supabase'
 import { JUST_OUT_KEY, useAuth } from './auth'
 
@@ -85,6 +85,14 @@ export function Login() {
     return v
   })
 
+  // Ao voltar do Google com o botão "voltar", o browser restaura a página
+  // a partir do bfcache com o estado React congelado (signing=true).
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => { if (e.persisted) setSigning(false) }
+    window.addEventListener('pageshow', onShow)
+    return () => window.removeEventListener('pageshow', onShow)
+  }, [])
+
   const [picker, setPicker] = useState(false)
   const devLogin = import.meta.env.DEV && supabaseConfigured
 
@@ -157,6 +165,7 @@ export function Login() {
         <p className="m-0 max-w-[340px] animate-pf-up text-center text-[12.5px] leading-relaxed text-muted text-pretty" style={rise(4)}>
           Ao continuar, aceita os <a href="#">Termos de utilização</a> e a <a href="#">Política de privacidade</a>. Só os membros convidados pelo proprietário têm acesso à granja.
         </p>
+        <Credits />
       </main>
       {devLogin && <DevAccountPicker open={picker} onClose={() => setPicker(false)} onGoogle={signIn} />}
     </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useUrlState } from '@/lib/urlState'
+import { useUrlEnum, useUrlState } from '@/lib/urlState'
 import { useFarm } from '@/app/farm'
 import { money, numP } from '@/lib/format'
 import { errorMessage } from '@/lib/supabase'
@@ -64,7 +64,7 @@ export default function AccountsTab() {
   const { update } = useTableMutations('accounts')
   const toast = useToast()
   const [q, setQ] = useUrlState('q', '')
-  const [kind, setKind] = useUrlState('kind', 'all')
+  const [kind, setKind] = useUrlEnum<AccountKind | 'all'>('kind', 'all', { all: 'all', Operacional: 'operational', Investimento: 'investment', Caixa: 'cash' })
   const [draft, setDraft] = useState<Draft | null>(null)
   const [off, setOff] = useState<Account | null>(null)
 
@@ -86,7 +86,7 @@ export default function AccountsTab() {
   return (
     <>
       <DataTable title="Contas" sub="Onde entra e sai o dinheiro da granja" addLabel="Nova conta" onAdd={() => setDraft(blank)}
-        search={q} onSearch={setQ} filter={{ value: kind, onChange: setKind, options: [['all', 'Todos os tipos'], ...KINDS.map((k) => [k, k] as const)] }}
+        search={q} onSearch={setQ} filter={{ value: kind, onChange: (v) => setKind(v as AccountKind), options: [['all', 'Todos os tipos'], ...KINDS.map((k) => [k, k] as const)] }}
         rows={rows} cols={cols} readOnly={!isOwner} dim={(a) => !a.active} emptyMsg="Nenhuma conta encontrada" minW={760}
         onEdit={(a) => setDraft({ id: a.id, name: a.name, kind: a.kind, holder: a.holder, initial: String(a.initial_balance), color: a.color, active: a.active })}
         onDelete={(a) => a.active ? setOff(a) : update.mutate({ id: a.id, active: true }, { onSuccess: () => toast('Conta reactivada') })} />

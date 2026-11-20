@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { Button, Icon, Logo, useToast } from '@/ui'
 import { useAuth } from './auth'
 import { useMemberships } from './farm'
+import { usePageTitle } from '@/lib/title'
 
 /** Signed in, but not a member of any farm. Only the super admin creates farms, so the user waits for an invite. */
 export function Onboarding() {
@@ -10,6 +11,7 @@ export function Onboarding() {
   const memberships = useMemberships()
   const qc = useQueryClient()
   const toast = useToast()
+  usePageTitle('Bem-vindo')
   const first = (user?.user_metadata?.full_name as string | undefined)?.split(' ')[0]
   // A deactivated account keeps its session until the token expires, but has no access.
   const profile = useQuery({

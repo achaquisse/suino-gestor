@@ -93,7 +93,7 @@ export function useAlerts() {
         sub: dShort(s.expires_on!),
         action: 'Ver stock',
         dismissible: true,
-        act: () => nav('/stock?estado=expiring'),
+        act: () => nav('/stock?status=expiring'),
       })
     }
     return out

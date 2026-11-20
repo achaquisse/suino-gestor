@@ -25,7 +25,7 @@ Feature: Navigation and access control
   @rbac @NAV-03
   Scenario: The caretaker cannot open finance pages by URL
     Given I am signed in as the caretaker
-    When I open "/money"
+    When I open "/expenses"
     Then I should see "Sem acesso às despesas"
     When I open "/reports"
     Then I should see "Sem acesso"

@@ -53,7 +53,7 @@ export function StockReport({ items, moves, txs, buckets, weekly, F, T }: {
   items: StockItem[]; moves: StockMovement[]; txs: Transaction[]; buckets: Bucket[]; weekly: boolean; F: string; T: string
 }) {
   const params = useUrlParams()
-  const itemId = params.get('artigo') ?? ''
+  const itemId = params.get('item') ?? ''
   const item = items.find((i) => i.id === itemId) ?? null
   const selRaw = params.get('sbucket')
   const sel = selRaw != null && /^\d+$/.test(selRaw) ? +selRaw : null
@@ -101,7 +101,7 @@ export function StockReport({ items, moves, txs, buckets, weekly, F, T }: {
             <h2 className="m-0 text-[15px] font-semibold">Compras e consumo ao longo do tempo</h2>
             <div className="text-[13px] text-muted">{item ? `${item.name} · em ${item.unit}` : 'Todos os artigos · em MT'} · por {weekly ? 'semana' : 'mês'}</div>
           </div>
-          <Select aria-label="Artigo" className="!w-auto max-w-full" value={itemId} onChange={(e) => setUrlParams({ artigo: e.target.value || null, sbucket: null })}>
+          <Select aria-label="Artigo" className="!w-auto max-w-full" value={itemId} onChange={(e) => setUrlParams({ item: e.target.value || null, sbucket: null })}>
             <option value="">Todos os artigos (MT)</option>
             {items.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
           </Select>

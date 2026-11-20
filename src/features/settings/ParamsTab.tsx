@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { useUrlState } from '@/lib/urlState'
+import { useUrlEnum, useUrlState } from '@/lib/urlState'
 import { useFarm } from '@/app/farm'
 import { numP } from '@/lib/format'
 import { errorMessage } from '@/lib/supabase'
 import { useParameters, useTableMutations } from '@/lib/queries'
-import type { Parameter } from '@/lib/database.types'
+import type { ParamGroup, Parameter } from '@/lib/database.types'
 import { PGROUPS } from '@/lib/constants'
 import { Button, Chip, ErrorState, Field, FormError, Input, Loading, Sheet, useToast } from '@/ui'
 import { DataTable, type Col } from './DataTable'
@@ -47,7 +47,7 @@ export default function ParamsTab() {
   const { isOwner } = useFarm()
   const params = useParameters()
   const [q, setQ] = useUrlState('q', '')
-  const [grp, setGrp] = useUrlState('group', 'all')
+  const [grp, setGrp] = useUrlEnum<ParamGroup | 'all'>('group', 'all', { all: 'all', Reprodução: 'breeding', Crescimento: 'growth', Vendas: 'sales', Stock: 'stock', Saúde: 'health', Finanças: 'finance' })
   const [edit, setEdit] = useState<Parameter | null>(null)
 
   if (params.isLoading) return <Loading />
@@ -65,7 +65,7 @@ export default function ParamsTab() {
   return (
     <>
       <DataTable title="Parâmetros" sub="Valores usados em previsões, alertas e cálculos"
-        search={q} onSearch={setQ} filter={{ value: grp, onChange: setGrp, options: [['all', 'Todos os grupos'], ...PGROUPS.map((g) => [g, g] as const)] }}
+        search={q} onSearch={setQ} filter={{ value: grp, onChange: (v) => setGrp(v as ParamGroup), options: [['all', 'Todos os grupos'], ...PGROUPS.map((g) => [g, g] as const)] }}
         rows={rows} cols={cols} readOnly={!isOwner} emptyMsg="Nenhum parâmetro encontrado" minW={560} onEdit={setEdit} />
       <ParamSheet param={edit} onClose={() => setEdit(null)} />
     </>

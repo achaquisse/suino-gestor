@@ -52,7 +52,7 @@ function FarmsCard() {
       ))}
       {isSuperAdmin && (
         <div className="flex flex-wrap gap-2">
-          <Button icon="add" onClick={() => navigate('/admin?nova=1')}>Nova granja</Button>
+          <Button icon="add" onClick={() => navigate('/admin?new=1')}>Nova granja</Button>
           <Button icon="admin_panel_settings" onClick={() => navigate('/admin')}>Administração</Button>
         </div>
       )}

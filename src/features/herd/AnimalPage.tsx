@@ -13,10 +13,11 @@ import { CAT_HELP, art, isSow, nextEvent, parentTags, pb } from './lib'
 import { HelpBtn, useHerd } from './parts'
 import { AnimalPhotos } from './AnimalPhotos'
 import { LifeCycle } from './LifeCycle'
+import { usePageTitle } from '@/lib/title'
 
 const TLT: Record<'all' | 'health' | 'breeding' | 'task', string> = { all: 'Todos', health: 'Saúde', breeding: 'Reprodução', task: 'Maneio' }
-type Tab = 'resumo' | 'repro' | 'hist' | 'fotos'
-const TABS: Tab[] = ['resumo', 'repro', 'hist', 'fotos']
+type Tab = 'summary' | 'breeding' | 'history' | 'photos'
+const TABS: Tab[] = ['summary', 'breeding', 'history', 'photos']
 
 const liveOf = (e: FarmEvent) => {
   const meta = e.meta as { [k: string]: Json | undefined } | null
@@ -44,9 +45,10 @@ export default function AnimalPage() {
   const weightsQ = useWeights(animal?.id)
   const gestation = useParam('gestation_days', 114)
   const weaning = useParam('weaning_age_days', 21)
-  const [tab, setTab] = useUrlState<Tab>('tab', 'resumo', TABS)
+  const [tab, setTab] = useUrlState<Tab>('tab', 'summary', TABS)
   const [tl, setTl] = useUrlState<keyof typeof TLT>('kind', 'all', Object.keys(TLT) as (keyof typeof TLT)[])
   const [photoOpen, setPhotoOpen] = useState(false)
+  usePageTitle(animal ? `${animal.tag} · ${animal.stage}` : null)
 
   const events = useMemo(() => eventsQ.data ?? [], [eventsQ.data])
   const weights = useMemo(() => weightsQ.data ?? [], [weightsQ.data])
@@ -68,9 +70,9 @@ export default function AnimalPage() {
   const idx = siblings.findIndex((a) => a.id === animal.id)
   const penName = ha?.penName ?? herd.pens.data?.find((p) => p.id === animal.pen_id)?.name ?? '—'
   const go = (i: number) => nav({ pathname: `/herd/animals/${encodeURIComponent(siblings[(i + siblings.length) % siblings.length].tag)}`, search: window.location.search })
-  const tabs: (readonly [Tab, string, string])[] = [['resumo', 'Resumo', 'badge'], ...(sow ? [['repro', 'Reprodução', 'favorite'] as const] : []), ['hist', 'Histórico', 'history'], ['fotos', 'Fotos', 'photo_library']]
-  const curTab = tabs.some((t) => t[0] === tab) ? tab : 'resumo'
-  const histTabs = tabs.map(([v, l, i]) => [v, v === 'hist' && events.length ? `${l} · ${events.length}` : l, i] as const)
+  const tabs: (readonly [Tab, string, string])[] = [['summary', 'Resumo', 'badge'], ...(sow ? [['breeding', 'Reprodução', 'favorite'] as const] : []), ['history', 'Histórico', 'history'], ['photos', 'Fotos', 'photo_library']]
+  const curTab = tabs.some((t) => t[0] === tab) ? tab : 'summary'
+  const histTabs = tabs.map(([v, l, i]) => [v, v === 'history' && events.length ? `${l} · ${events.length}` : l, i] as const)
 
   const first = weights[0]
   const last = weights[weights.length - 1]
@@ -147,7 +149,7 @@ export default function AnimalPage() {
               <div className="absolute inset-0 overflow-hidden rounded-[20px] border border-line bg-[#F3F3F9]"><AnimalPhoto path={null} /></div>
             )}
             {canEditHerd && (
-              <button type="button" aria-label="Fotos" title="Fotos" onClick={() => setTab('fotos')}
+              <button type="button" aria-label="Fotos" title="Fotos" onClick={() => setTab('photos')}
                 className="absolute -right-1.5 -bottom-1.5 grid size-8 place-items-center rounded-full border-2 border-white bg-ink p-0 text-white shadow-[0_2px_8px_rgba(22,22,40,0.2)] hover:bg-accent-strong">
                 <Icon name="photo_camera" size={16} />
               </button>
@@ -210,7 +212,7 @@ export default function AnimalPage() {
 
       <Tabs options={histTabs} value={curTab} onChange={setTab} className="max-w-full self-start rounded-[14px] bg-sunken p-1" />
 
-      {curTab === 'resumo' && (
+      {curTab === 'summary' && (
         <>
           <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))]">
             <Card className="flex flex-col gap-3 p-5">
@@ -272,7 +274,7 @@ export default function AnimalPage() {
                 return ex ? <Link key={p} to={`/herd/animals/${encodeURIComponent(p)}`} className={cx(cls, 'hover:border-[#C9C2FB] hover:no-underline')}>{body}</Link> : <div key={p} className={cls}>{body}</div>
               })}
               {kids.length > 0 && (
-                <button type="button" onClick={() => setTab(sow ? 'repro' : 'resumo')} className="flex flex-col items-start gap-0.5 rounded-[14px] border border-line bg-white px-3.5 py-2.5 text-ink hover:border-[#C9C2FB]">
+                <button type="button" onClick={() => setTab(sow ? 'breeding' : 'summary')} className="flex flex-col items-start gap-0.5 rounded-[14px] border border-line bg-white px-3.5 py-2.5 text-ink hover:border-[#C9C2FB]">
                   <span className="text-xs text-muted">Descendentes</span><span className="tabular font-semibold">{kids.length}</span>
                 </button>
               )}
@@ -283,7 +285,7 @@ export default function AnimalPage() {
         </>
       )}
 
-      {curTab === 'repro' && (
+      {curTab === 'breeding' && (
         <>
           <Card className="flex flex-col gap-3.5 p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -300,7 +302,7 @@ export default function AnimalPage() {
         </>
       )}
 
-      {curTab === 'fotos' && <AnimalPhotos animal={animal} />}
+      {curTab === 'photos' && <AnimalPhotos animal={animal} />}
 
       <Sheet open={photoOpen && !!animal.photo_path} onClose={() => setPhotoOpen(false)} title={animal.tag} maxWidth={900}>
         <div className="relative grid min-h-[200px] place-items-center overflow-hidden rounded-2xl bg-[#F3F3F9]">
@@ -308,7 +310,7 @@ export default function AnimalPage() {
         </div>
       </Sheet>
 
-      {curTab === 'hist' && (
+      {curTab === 'history' && (
         <Card className="flex flex-col gap-3.5 p-5">
           <div className="flex flex-wrap items-center justify-between gap-2.5">
             <h2 className="m-0 text-[15px] font-semibold">Histórico · {plural(events.length, 'registo', 'registos')}</h2>

@@ -28,7 +28,7 @@ Feature: Herd overview
   @HERD-04
   Scenario: The breeders KPI filters the list
     When I click the herd KPI "Reprodutoras"
-    Then I should be on a page whose URL contains "stage=rep"
+    Then I should be on a page whose URL contains "stage=breeders"
     And the animal list count should equal the herd KPI "Reprodutoras"
 
   @smoke @HERD-05

@@ -14,7 +14,7 @@ import {
   Logo, SearchInput, Select, Sheet, Stat, Toggle, cx, useToast,
 } from '@/ui'
 
-type Tab = 'granjas' | 'tipos' | 'catalogos' | 'utilizadores'
+type Tab = 'farms' | 'cost-types' | 'catalogs' | 'users'
 
 const fold = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
 
@@ -124,7 +124,7 @@ function RenameFarmSheet({ farm, onClose }: { farm: AdminFarm | null; onClose: (
   )
 }
 
-function FarmsTab({ creating, setCreating, onOpen }: { creating: boolean; setCreating: (v: boolean) => void; onOpen: (tab: 'tipos' | 'catalogos', farmId: string) => void }) {
+function FarmsTab({ creating, setCreating, onOpen }: { creating: boolean; setCreating: (v: boolean) => void; onOpen: (tab: 'cost-types' | 'catalogs', farmId: string) => void }) {
   const farms = useAdminFarms()
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -195,8 +195,8 @@ function FarmsTab({ creating, setCreating, onOpen }: { creating: boolean; setCre
                 {f.pending_invites > 0 && <Chip tone="amber" icon="mail">{plural(f.pending_invites, 'convite', 'convites')}</Chip>}
                 <div className="flex items-center gap-1">
                   <IconButton icon="edit" label={`Renomear ${f.name}`} onClick={() => setRenaming(f)} />
-                  <IconButton icon="category" label={`Tipos de custo de ${f.name}`} onClick={() => onOpen('tipos', f.id)} />
-                  <IconButton icon="vaccines" label={`Catálogos de ${f.name}`} onClick={() => onOpen('catalogos', f.id)} />
+                  <IconButton icon="category" label={`Tipos de custo de ${f.name}`} onClick={() => onOpen('cost-types', f.id)} />
+                  <IconButton icon="vaccines" label={`Catálogos de ${f.name}`} onClick={() => onOpen('catalogs', f.id)} />
                   <IconButton icon="delete" label={`Eliminar ${f.name}`} className="text-danger" onClick={() => setDeleting(f)} />
                   <Button icon="login" onClick={() => enter(f)} className="ml-1">Entrar</Button>
                 </div>
@@ -257,7 +257,7 @@ function UsersTab() {
           {rows.map((u) => (
             <li key={u.id}>
               <Card as="article" className={cx('relative flex flex-wrap items-center gap-3.5 p-4 hover:border-[#D4D4E2]', u.disabled_at && 'opacity-60')}>
-                <button type="button" onClick={() => navigate(`/admin/utilizadores/${u.id}`)} aria-label={`Abrir ${u.name || u.email}`}
+                <button type="button" onClick={() => navigate(`/admin/users/${u.id}`)} aria-label={`Abrir ${u.name || u.email}`}
                   className="absolute inset-0 rounded-card border-0 bg-transparent p-0" />
                 <div className="flex min-w-0 flex-1 basis-[240px] items-center gap-3">
                   <Avatar initials={initials(u.name || u.email)} size={42} />
@@ -292,15 +292,15 @@ export default function AdminPage() {
   const toast = useToast()
   const [params, setParams] = useSearchParams()
   const tabParam = params.get('tab')
-  const tab: Tab = tabParam === 'utilizadores' || tabParam === 'tipos' || tabParam === 'catalogos' ? tabParam : 'granjas'
-  const creating = params.get('nova') === '1'
+  const tab: Tab = tabParam === 'users' || tabParam === 'cost-types' || tabParam === 'catalogs' ? tabParam : 'farms'
+  const creating = params.get('new') === '1'
   const set = (patch: Record<string, string | null>) => setParams((p) => {
     for (const [k, v] of Object.entries(patch)) { if (v === null) p.delete(k); else p.set(k, v) }
     return p
   }, { replace: true })
   const hasFarm = !!memberships.data?.length
 
-  const tabs: [Tab, string, string][] = [['granjas', 'Granjas', 'agriculture'], ['tipos', 'Tipos de custo', 'category'], ['catalogos', 'Catálogos', 'vaccines'], ['utilizadores', 'Utilizadores', 'group']]
+  const tabs: [Tab, string, string][] = [['farms', 'Granjas', 'agriculture'], ['cost-types', 'Tipos de custo', 'category'], ['catalogs', 'Catálogos', 'vaccines'], ['users', 'Utilizadores', 'group']]
 
   return (
     <div className="app-bg min-h-dvh">
@@ -317,21 +317,21 @@ export default function AdminPage() {
         </header>
         <div role="tablist" className="flex max-w-full flex-wrap gap-1 self-start rounded-[14px] bg-[#EEEEF5] p-1">
           {tabs.map(([v, l, icon]) => (
-            <button key={v} type="button" role="tab" aria-selected={v === tab} onClick={() => set({ tab: v === 'granjas' ? null : v, q: null, group: null, page: null, per: null })}
+            <button key={v} type="button" role="tab" aria-selected={v === tab} onClick={() => set({ tab: v === 'farms' ? null : v, q: null, group: null, page: null, per: null })}
               className={cx('flex h-10 items-center gap-1.5 whitespace-nowrap rounded-[11px] border-0 px-3.5 text-sm font-semibold transition-colors',
                 v === tab ? 'bg-white text-ink shadow-[0_1px_2px_rgba(22,22,40,0.08),0_0_0_1px_#ECECF3]' : 'bg-transparent text-muted')}>
               <Icon name={icon} size={18} />{l}
             </button>
           ))}
         </div>
-        {tab === 'granjas' && <FarmsTab creating={creating} setCreating={(v) => set({ nova: v ? '1' : null })} onOpen={(t, id) => set({ tab: t, granja: id })} />}
-        {(tab === 'tipos' || tab === 'catalogos') && (
-          <FarmScoped farmId={params.get('granja')} setFarmId={(id) => set({ granja: id, q: null, group: null, page: null })}
-            sub={tab === 'tipos' ? 'Crie uma granja para gerir os seus tipos de custo.' : 'Crie uma granja para gerir os seus catálogos.'}>
-            {(id) => tab === 'tipos' ? <CostTypesTab farmId={id} /> : <CatalogsTab farmId={id} />}
+        {tab === 'farms' && <FarmsTab creating={creating} setCreating={(v) => set({ new: v ? '1' : null })} onOpen={(t, id) => set({ tab: t, farm: id })} />}
+        {(tab === 'cost-types' || tab === 'catalogs') && (
+          <FarmScoped farmId={params.get('farm')} setFarmId={(id) => set({ farm: id, q: null, group: null, page: null })}
+            sub={tab === 'cost-types' ? 'Crie uma granja para gerir os seus tipos de custo.' : 'Crie uma granja para gerir os seus catálogos.'}>
+            {(id) => tab === 'cost-types' ? <CostTypesTab farmId={id} /> : <CatalogsTab farmId={id} />}
           </FarmScoped>
         )}
-        {tab === 'utilizadores' && <UsersTab />}
+        {tab === 'users' && <UsersTab />}
       </div>
     </div>
   )

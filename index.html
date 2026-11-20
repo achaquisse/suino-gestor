@@ -3,8 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#F6F7FB" />
+    <meta name="color-scheme" content="light" />
+    <meta name="format-detection" content="telephone=no" />
     <meta name="description" content="Gestão de granjas de suínos: animais, tarefas, finanças e relatórios." />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
@@ -15,11 +17,27 @@
     <title>Suino Gestor</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&display=block" />
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&display=block" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'" />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+    </noscript>
+    <style>
+      html, body { margin: 0; background: #F6F7FB; }
+      #boot { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; background: #F6F7FB; font: 500 14px/1.4 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #6B6B80; }
+      #boot svg { width: 72px; height: 72px; border-radius: 20px; box-shadow: 0 10px 30px rgba(91, 76, 240, 0.28); animation: boot-pulse 1.4s ease-in-out infinite; }
+      @keyframes boot-pulse { 50% { transform: scale(0.94); } }
+      @media (prefers-reduced-motion: reduce) { #boot svg { animation: none; } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="boot" role="status" aria-label="A carregar o Suino Gestor">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="boot-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8B5CF6"/><stop offset=".55" stop-color="#5B4CF5"/><stop offset="1" stop-color="#22B8F0"/></linearGradient></defs><rect width="64" height="64" rx="18" fill="url(#boot-g)"/><path d="M14.5 27C12.6 19.5 13.6 13.4 16.6 11.6c4 .9 8.6 4.6 11 9.4z" fill="#fff"/><path d="M49.5 27c1.9-7.5.9-13.6-2.1-15.4-4 .9-8.6 4.6-11 9.4z" fill="#fff"/><path d="M17 22.5c-.6-3.6-.2-6.4.9-7.6 2.2.7 4.6 2.6 6 5z" fill="#E4DEFF"/><path d="M47 22.5c.6-3.6.2-6.4-.9-7.6-2.2.7-4.6 2.6-6 5z" fill="#E4DEFF"/><ellipse cx="32" cy="35.5" rx="19.5" ry="17" fill="#fff"/><circle cx="19.5" cy="40" r="3" fill="#FFC9DE"/><circle cx="44.5" cy="40" r="3" fill="#FFC9DE"/><circle cx="24.5" cy="31" r="2.4" fill="#2B2470"/><circle cx="39.5" cy="31" r="2.4" fill="#2B2470"/><ellipse cx="32" cy="41" rx="8.5" ry="6" fill="#E4DEFF"/><ellipse cx="29" cy="41" rx="1.6" ry="2.4" fill="#5B4CF0"/><ellipse cx="35" cy="41" rx="1.6" ry="2.4" fill="#5B4CF0"/></svg>
+        <span>Suino Gestor</span>
+      </div>
+    </div>
     <script src="/config.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>

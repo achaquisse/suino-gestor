@@ -16,7 +16,7 @@ Feature: Reports
   Scenario: Change the report period
     Then I should see the button "Este mês"
     When I choose the report period "Este ano"
-    Then I should be on a page whose URL contains "period=ano"
+    Then I should be on a page whose URL contains "period=this-year"
 
   @REP-06
   Scenario Outline: The report offers the date presets
@@ -24,12 +24,12 @@ Feature: Reports
     Then I should be on a page whose URL contains "period=<key>"
 
     Examples:
-      | label                   | key      |
-      | Mês passado             | mes-1    |
-      | Mês antepassado         | mes-2    |
-      | Este semestre           | semestre |
-      | Ano passado             | ano-1    |
-      | Desde o início até hoje | tudo     |
+      | label                   | key            |
+      | Mês passado             | last-month     |
+      | Mês antepassado         | two-months-ago |
+      | Este semestre           | this-half      |
+      | Ano passado             | last-year      |
+      | Desde o início até hoje | all-time       |
 
   @REP-03
   Scenario: Export the report as CSV

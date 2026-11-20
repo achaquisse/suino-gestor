@@ -7,7 +7,7 @@ Feature: Expenses
   @smoke @MON-01
   Scenario: The owner sees the expenses page, without income or results
     Given I am signed in as the owner
-    When I open "/money"
+    When I open "/expenses"
     Then I should see the heading "Despesas"
     And I should see "Compromissos"
     And I should see the button "Nova despesa"
@@ -17,7 +17,7 @@ Feature: Expenses
   @smoke @mutation @MON-02
   Scenario: Record an expense
     Given I am signed in as the owner
-    When I open "/money"
+    When I open "/expenses"
     And I click the button "Nova despesa"
     And I choose the expense category "Veterinário"
     And I fill "Valor (MT)" with "1500"
@@ -30,7 +30,7 @@ Feature: Expenses
   @MON-03
   Scenario: An expense needs a positive amount
     Given I am signed in as the owner
-    When I open "/money"
+    When I open "/expenses"
     And I click the button "Nova despesa"
     And I choose the expense category "Veterinário"
     And I fill "Valor (MT)" with "0"
@@ -40,14 +40,14 @@ Feature: Expenses
   @rbac @MON-04
   Scenario: The investor can read but not record movements
     Given I am signed in as the investor
-    When I open "/money"
+    When I open "/expenses"
     Then I should see the heading "Despesas"
     And I should not see the button "Nova despesa"
 
   @MON-05
   Scenario: The expense sheet only records expenses
     Given I am signed in as the owner
-    When I open "/money"
+    When I open "/expenses"
     And I click the button "Nova despesa"
     Then the sheet "Nova despesa" should be open
     And I should see the button "Registar despesa"
@@ -56,17 +56,17 @@ Feature: Expenses
   @MON-06
   Scenario: The money page defaults to this month and offers the date presets
     Given I am signed in as the owner
-    When I open "/money"
+    When I open "/expenses"
     Then I should see the button "Este mês"
     When I choose the report period "Mês passado"
-    Then I should be on a page whose URL contains "period=mes-1"
+    Then I should be on a page whose URL contains "period=last-month"
     When I choose the report period "Desde o início até hoje"
-    Then I should be on a page whose URL contains "period=tudo"
+    Then I should be on a page whose URL contains "period=all-time"
 
   @MON-07
   Scenario: An expense in a stock category must name the stock item
     Given I am signed in as the owner
-    When I open "/money"
+    When I open "/expenses"
     And I click the button "Nova despesa"
     And I choose the expense category "Ração"
     And I fill "Quantidade (sacos)" with "2"
@@ -76,7 +76,7 @@ Feature: Expenses
   @mutation @MON-08
   Scenario: Create a new stock item while recording its purchase
     Given I am signed in as the owner
-    When I open "/money"
+    When I open "/expenses"
     And I click the button "Nova despesa"
     And I choose the expense category "Ração"
     And I select "+ Criar novo artigo" in "Artigo de stock"

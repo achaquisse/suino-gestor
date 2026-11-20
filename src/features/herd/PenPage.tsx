@@ -8,6 +8,7 @@ import { capacityLabel, penVisual } from '@/lib/pens'
 import { ageShort, penHelp } from './lib'
 import { AnimalTable, HelpBtn, Kpi, KpiGrid, avgLabel, avgOf, useHerd } from './parts'
 import { PenLayout } from './PenLayout'
+import { usePageTitle } from '@/lib/title'
 
 export default function PenPage() {
   const { penId } = useParams()
@@ -16,6 +17,7 @@ export default function PenPage() {
   const { list, pens, loading, error, refetch } = useHerd()
 
   const pen = pens.data?.find((p) => p.id === penId)
+  usePageTitle(pen?.name)
   const rows = useMemo(() => list.filter((a) => a.pen_id === penId), [list, penId])
   const [counts, alerts] = useMemo(() => {
     const m = new Map<string, number>()

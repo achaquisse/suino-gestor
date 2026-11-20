@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router'
 import { useFarm } from '@/app/farm'
-import { setUrlParams, useUrlState, type UrlPatch } from '@/lib/urlState'
+import { setUrlParams, useUrlEnum, useUrlState, type UrlPatch } from '@/lib/urlState'
 import { useOverlays } from '@/app/overlays'
 import { Button, Card, ErrorState, IconTile, Loading, SearchInput, cx } from '@/ui'
 import { ACC, GREEN, RED, SGC, SGL, type StageGroup } from '@/lib/constants'
@@ -14,19 +14,22 @@ type StageFilter = StageGroup | 'all'
 type StFilter = 'all' | 'attn' | CatId
 
 const STAGE_KEYS: StageFilter[] = ['all', 'rep', 'lei', 'cre', 'rec', 'eng', 'var']
-const ST_KEYS: StFilter[] = ['all', 'attn', ...ACAT.map((c) => c.id)]
+const STAGE_SLUG: Record<StageFilter, string> = { all: 'all', rep: 'breeders', lei: 'piglets', cre: 'nursery', rec: 'growers', eng: 'finishers', var: 'boars' }
+const CAT_SLUG: Record<CatId, string> = { doenca: 'sick', med: 'medication', cio: 'heat', parto: 'farrowing', car: 'withdrawal' }
+const ST_SLUG: Record<StFilter, string> = { all: 'all', attn: 'attention', ...CAT_SLUG }
+const AC_SLUG: Record<CatId | '', string> = { '': '', ...CAT_SLUG }
 
 export default function HerdPage() {
   const nav = useNavigate()
   const { canEditHerd } = useFarm()
   const { openLog } = useOverlays()
   const { list, pens, loading, error, refetch } = useHerd()
-  const [stage] = useUrlState<StageFilter>('stage', 'all', STAGE_KEYS)
-  const [st] = useUrlState<StFilter>('status', 'all', ST_KEYS)
+  const [stage] = useUrlEnum<StageFilter>('stage', 'all', STAGE_SLUG)
+  const [st] = useUrlEnum<StFilter>('status', 'all', ST_SLUG)
   const [query] = useUrlState('q', '')
-  const [ac, setAc] = useUrlState<CatId | ''>('attn', '')
+  const [ac, setAc] = useUrlEnum<CatId | ''>('attn', '', AC_SLUG)
   const set = (p: UrlPatch) => setUrlParams({ ...p, page: null })
-  const setStage = (g: StageFilter) => set({ stage: g === 'all' ? null : g })
+  const setStage = (g: StageFilter) => set({ stage: g === 'all' ? null : STAGE_SLUG[g] })
   const setQuery = (v: string) => set({ q: v })
 
   const q = query.trim().toLowerCase()
@@ -69,7 +72,7 @@ export default function HerdPage() {
   const filtered = stage !== 'all' || st !== 'all' || !!q
   // The animal list sits under the layout: filtering scrolls to it.
   const toListView = () => requestAnimationFrame(() => document.getElementById('lista-animais')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
-  const toList = (s: StFilter, g: StageFilter = 'all') => { set({ q: null, status: s === 'all' ? null : s, stage: g === 'all' ? null : g }); toListView() }
+  const toList = (s: StFilter, g: StageFilter = 'all') => { set({ q: null, status: s === 'all' ? null : ST_SLUG[s], stage: g === 'all' ? null : STAGE_SLUG[g] }); toListView() }
   const listTitle = q ? `Resultados para “${query.trim()}”` : st === 'attn' ? 'Precisam de atenção' : st !== 'all' ? ACAT.find((c) => c.id === st)?.title ?? '' : stage === 'all' ? 'Todos os animais' : SGL[stage]
   const reps = list.filter((a) => a.g === 'rep').length
   const lei = list.filter((a) => a.g === 'lei').length
@@ -90,10 +93,10 @@ export default function HerdPage() {
         <>
           <KpiGrid>
             <Kpi label="Animais" value={list.length} sub={plural(pens.data!.length, 'curral', 'currais')} icon="pets" bg="#EEECFE" fg={ACC} />
-            <Kpi label="Reprodutoras" value={reps} sub="porcas e leitoas" icon="favorite" bg="#FCE7F3" fg="#B0306E" onClick={() => { set({ stage: 'rep' }); toListView() }} />
-            <Kpi label="Leitões" value={lei} sub="em maternidade" icon="child_care" bg="#FDF1E2" fg="#A2601A" onClick={() => { set({ stage: 'lei' }); toListView() }} />
+            <Kpi label="Reprodutoras" value={reps} sub="porcas e leitoas" icon="favorite" bg="#FCE7F3" fg="#B0306E" onClick={() => { set({ stage: STAGE_SLUG.rep }); toListView() }} />
+            <Kpi label="Leitões" value={lei} sub="em maternidade" icon="child_care" bg="#FDF1E2" fg="#A2601A" onClick={() => { set({ stage: STAGE_SLUG.lei }); toListView() }} />
             <Kpi label="Precisam de atenção" value={attnN} sub="saúde, tratamento ou carência" icon="error" bg="#FDECEA" fg="#C0302A"
-              valueColor={attnN ? RED : GREEN} active={st !== 'all'} onClick={() => { set({ q: null, status: st === 'attn' ? null : 'attn' }); toListView() }} />
+              valueColor={attnN ? RED : GREEN} active={st !== 'all'} onClick={() => { set({ q: null, status: st === 'attn' ? null : ST_SLUG.attn }); toListView() }} />
           </KpiGrid>
 
           {selCat && (

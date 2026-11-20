@@ -1,7 +1,7 @@
 import { Suspense, useId, useLayoutEffect, useRef, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Link, NavLink, Outlet, useLocation, useMatch, useNavigate, useParams } from 'react-router'
-import { Avatar, Icon, Loading, Logo, cx, usePopover, useToast } from '@/ui'
+import { Avatar, Credits, Icon, Loading, Logo, cx, usePopover, useToast } from '@/ui'
 import { ROLE_LABEL } from '@/lib/constants'
 import { useAnimal, useInvalidateFarm, useNotificationResolutions } from '@/lib/queries'
 import { errorMessage, supabase } from '@/lib/supabase'
@@ -18,7 +18,7 @@ function useNavDefs(): NavDef[] {
   const all: (NavDef & { money?: boolean })[] = [
     { to: '/herd', label: 'Animais', icon: 'fence' },
     { to: '/stock', label: 'Stock', icon: 'inventory_2' },
-    { to: '/money', label: 'Despesas', icon: 'receipt_long', money: true },
+    { to: '/expenses', label: 'Despesas', icon: 'receipt_long', money: true },
     { to: '/reports', label: 'Relatórios', icon: 'monitoring', money: true },
     { to: '/help', label: 'Ajuda', icon: 'help' },
   ]
@@ -126,6 +126,8 @@ function UserMenu({ compact }: { compact?: boolean }) {
             className={cx(item, 'text-danger hover:bg-danger-soft')}>
             <Icon name="logout" />Terminar sessão
           </button>
+          <div className="mx-1.5 my-1 h-px bg-divider" />
+          <Credits className="px-2 pt-1 pb-1.5" />
         </div>
       )}
     </div>
@@ -258,7 +260,7 @@ export function Shell() {
           </div>
         )}
 
-        <main className="mx-auto w-full max-w-[1120px] flex-1 px-4 pt-5 pb-[120px] wide:px-10 wide:pt-7 wide:pb-14">
+        <main className="mx-auto w-full max-w-[1120px] flex-1 pr-[max(16px,env(safe-area-inset-right))] pl-[max(16px,env(safe-area-inset-left))] pt-5 pb-[120px] wide:px-10 wide:pt-7 wide:pb-14">
           <Suspense fallback={<Loading />}>
             <div key={location.pathname} className="animate-pf-fade">
               <Outlet />
@@ -268,7 +270,7 @@ export function Shell() {
 
         {/* Bottom nav */}
         <nav ref={bottomRef} aria-label="Principal"
-          className="glass sticky bottom-[calc(10px+env(safe-area-inset-bottom))] z-20 mx-2.5 flex rounded-[24px] border border-white/95 p-1.5 shadow-[inset_0_1px_0_#fff,0_14px_40px_rgba(91,76,245,0.18)] wide:hidden">
+          className="glass sticky bottom-[calc(10px+env(safe-area-inset-bottom))] z-20 mr-[max(10px,env(safe-area-inset-right))] ml-[max(10px,env(safe-area-inset-left))] flex rounded-[24px] border border-white/95 p-1.5 shadow-[inset_0_1px_0_#fff,0_14px_40px_rgba(91,76,245,0.18)] wide:hidden">
           <div className="absolute top-1.5 bottom-1.5 rounded-[18px] bg-accent-soft transition-[left,width,opacity] duration-[450ms] ease-spring"
             style={{ left: bottomPos?.l ?? 0, width: bottomPos?.w ?? 0, opacity: bottomPos ? 1 : 0 }} />
           <button type="button" onClick={openQuick} aria-label="Registo rápido"

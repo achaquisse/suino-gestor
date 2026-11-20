@@ -14,7 +14,7 @@ import { PayDebtSheet, PayRecurringSheet } from './PaySheet'
 import RecurringSheet from './RecurringSheet'
 import TransactionsCard from './TransactionsCard'
 import TxDetailSheet from './TxDetailSheet'
-import { setUrlParams, useUrlParams, useUrlState } from '@/lib/urlState'
+import { setUrlParams, useUrlEnum, useUrlParams, useUrlState } from '@/lib/urlState'
 import { defaultFilters, filtersFromParams, filtersToParams, groupSiblings, isFiltered, makeLookups, splitsOf, type Filters } from './model'
 import { useFilesIndex } from './useFilesIndex'
 
@@ -47,7 +47,7 @@ function MoneyContent({ canWrite }: { canWrite: boolean }) {
   // "Desde o início" starts at the first movement (or the farm's creation).
   const start = useMemo(() => firstDate([farm.created_at, ...(txQ.data ?? []).map((t) => t.tx_date)]), [farm.created_at, txQ.data])
   const filters = useMemo(() => filtersFromParams(params, start), [params, start])
-  const [group, setGroup] = useUrlState<CatGroup>('group', 'all', ['all', 'Investimento', 'Operacional'])
+  const [group, setGroup] = useUrlEnum<CatGroup>('group', 'all', { all: 'all', Investimento: 'investment', Operacional: 'operational' })
   const [tab, setTab] = useUrlState<CommitTab>('commit', 'rec', ['rec', 'debt'])
   const [modal, setModal] = useState<Modal | null>(null)
 

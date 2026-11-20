@@ -30,7 +30,7 @@ Feature: Settings
   @mutation @SET-03
   Scenario: Create a funding account
     Given I am signed in as the owner
-    When I open "/settings?tab=contas"
+    When I open "/settings?tab=accounts"
     And I click the button "Nova conta"
     And I fill "Nome" with "Conta E2E"
     And I submit the sheet with "Guardar"
@@ -61,7 +61,7 @@ Feature: Settings
   @mutation @SET-06
   Scenario: Register a pen with a role, no capacity limit and closed for use
     Given I am signed in as the owner
-    When I open "/settings?tab=currais"
+    When I open "/settings?tab=pens"
     Then I should see "Esquema dos currais"
     When I click the button "Novo curral"
     And I fill "Nome" with "Curral E2E"
@@ -76,6 +76,6 @@ Feature: Settings
   @rbac @SET-07
   Scenario: The caretaker sees the pen layout but cannot change it
     Given I am signed in as the caretaker
-    When I open "/settings?tab=currais"
+    When I open "/settings?tab=pens"
     Then I should see "Esquema dos currais"
     But I should not see the button "Novo curral"

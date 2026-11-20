@@ -8,7 +8,7 @@ import { Button, Card, Chip, Empty, ErrorState, IconButton, Loading, PageHeader,
 import { expiryDays, isExpiring, isLow, qf, qtyLabel } from './model'
 import { blankDraft, draftOf, ItemFormSheet, ItemSheet, MovementRow, MoveSheet, type MoveTarget } from './sheets'
 
-type Tab = 'artigos' | 'movimentos'
+type Tab = 'items' | 'moves'
 type ItemFilter = 'all' | 'low' | 'expiring' | 'inactive'
 type MoveFilter = 'all' | 'in' | 'out'
 
@@ -16,7 +16,7 @@ export default function StockPage() {
   const { isOwner, canEditHerd, canSeeMoney } = useFarm()
   const stock = useStock()
   const notice = useParam('expiry_notice_days', 30)
-  const [tab] = useUrlState<Tab>('tab', 'artigos', ['artigos', 'movimentos'])
+  const [tab] = useUrlState<Tab>('tab', 'items', ['items', 'moves'])
   const [detailId, setDetailId] = useState<string | null>(null)
   const [move, setMove] = useState<MoveTarget | null>(null)
   const [form, setForm] = useState<ReturnType<typeof blankDraft> | null>(null)
@@ -32,7 +32,7 @@ export default function StockPage() {
   const expiring = active.filter((s) => isExpiring(s, notice)).length
   const value = active.reduce((sum, s) => sum + (s.unit_price ?? 0) * s.qty, 0)
   const openMove = (t: MoveTarget) => setMove(t)
-  const changeTab = (t: Tab) => setUrlParams({ tab: t === 'artigos' ? null : t, q: null, itemsPage: null, movesPage: null })
+  const changeTab = (t: Tab) => setUrlParams({ tab: t === 'items' ? null : t, q: null, itemsPage: null, movesPage: null })
 
   return (
     <div className="flex flex-col gap-5">
@@ -51,9 +51,9 @@ export default function StockPage() {
           : <Stat label="Inactivos" value={all.length - active.length} icon="block" tint="#F0F0F6" ink="#55556A" delay={120} />}
       </div>
 
-      <Tabs options={[['artigos', 'Artigos', 'inventory_2'], ['movimentos', 'Movimentos', 'history']] as const} value={tab} onChange={changeTab} />
+      <Tabs options={[['items', 'Artigos', 'inventory_2'], ['moves', 'Movimentos', 'history']] as const} value={tab} onChange={changeTab} />
 
-      {tab === 'artigos'
+      {tab === 'items'
         ? <ItemsCard items={all} notice={notice} canMove={canEditHerd} onOpen={(s) => setDetailId(s.id)} onMove={openMove}
             onAdd={isOwner ? () => setForm(blankDraft()) : undefined} />
         : <MovementsCard items={all} />}
@@ -70,7 +70,7 @@ function ItemsCard({ items, notice, canMove, onOpen, onMove, onAdd }: {
   onOpen: (s: StockItem) => void; onMove: (t: MoveTarget) => void; onAdd?: () => void
 }) {
   const [q, setQ] = useUrlState('q', '')
-  const [filter, setFilter] = useUrlState<ItemFilter>('estado', 'all', ['all', 'low', 'expiring', 'inactive'])
+  const [filter, setFilter] = useUrlState<ItemFilter>('status', 'all', ['all', 'low', 'expiring', 'inactive'])
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase()
     return items
@@ -129,8 +129,8 @@ function ItemsCard({ items, notice, canMove, onOpen, onMove, onAdd }: {
 }
 
 function MovementsCard({ items }: { items: StockItem[] }) {
-  const [itemId, setItemId] = useUrlState('artigo', '')
-  const [dir, setDir] = useUrlState<MoveFilter>('tipo', 'all', ['all', 'in', 'out'])
+  const [itemId, setItemId] = useUrlState('item', '')
+  const [dir, setDir] = useUrlState<MoveFilter>('type', 'all', ['all', 'in', 'out'])
   const [q, setQ] = useUrlState('q', '')
   const moves = useStockMovements(itemId || undefined)
   const byId = useMemo(() => new Map(items.map((i) => [i.id, i])), [items])

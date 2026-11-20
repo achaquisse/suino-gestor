@@ -1,7 +1,10 @@
-import { useState, useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { Button, Icon, IconButton, Sheet } from '@/ui'
-import { dismissInstall, installDismissed, promptInstall, useInstall } from './register'
+import { dismissInstall, installDismissed, iosBrowser, promptInstall, returningVisitor, useInstall } from './register'
+
+const ENGAGE_MS = 30_000
+const BROWSER_NAME = { safari: 'Safari', chrome: 'Chrome', edge: 'Edge', firefox: 'Firefox' } as const
 
 let iosHelpOpen = false
 const helpListeners = new Set<() => void>()
@@ -25,6 +28,7 @@ export function useInstallAction() {
 
 function IosInstallSheet() {
   const open = useIosHelp()
+  const browser = iosBrowser()
   const step = 'flex items-start gap-3 rounded-[14px] bg-sunken p-3.5'
   const num = 'grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white text-[13px] font-semibold text-accent-strong'
   return (
@@ -34,11 +38,11 @@ function IosInstallSheet() {
       <ol className="m-0 flex list-none flex-col gap-2.5 p-0">
         <li className={step}>
           <span className={num}>1</span>
-          <span className="pt-0.5">No Safari, toque em <b>Partilhar</b> <Icon name="ios_share" size={18} className="-mb-0.5 text-accent-strong" /> na barra do navegador.</span>
+          <span className="pt-0.5">No {BROWSER_NAME[browser]}, toque em <b>Partilhar</b> <Icon name="ios_share" size={18} className="-mb-0.5 text-accent-strong" /> {browser === 'safari' ? 'na barra do navegador (em baixo no iPhone, em cima no iPad)' : 'na barra de endereço'}.</span>
         </li>
         <li className={step}>
           <span className={num}>2</span>
-          <span className="pt-0.5">Deslize e escolha <b>Adicionar ao ecrã principal</b> <Icon name="add_box" size={18} className="-mb-0.5 text-accent-strong" />.</span>
+          <span className="pt-0.5">Deslize, toque em <b>Ver mais</b> se necessário e escolha <b>Adicionar ao ecrã principal</b> <Icon name="add_box" size={18} className="-mb-0.5 text-accent-strong" />.</span>
         </li>
         <li className={step}>
           <span className={num}>3</span>
@@ -53,11 +57,17 @@ function IosInstallSheet() {
 export function InstallPrompt() {
   const { available, start } = useInstallAction()
   const [hidden, setHidden] = useState(installDismissed)
+  const [engaged, setEngaged] = useState(returningVisitor)
+  useEffect(() => {
+    if (engaged || hidden || !available) return
+    const t = setTimeout(() => setEngaged(true), ENGAGE_MS)
+    return () => clearTimeout(t)
+  }, [engaged, hidden, available])
   const dismiss = () => { dismissInstall(); setHidden(true) }
 
   return (
     <>
-      {available && !hidden && createPortal(
+      {available && engaged && !hidden && createPortal(
         <div role="dialog" aria-label="Instalar o Suino Gestor"
           className="fixed inset-x-3 bottom-[calc(150px+env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-[420px] animate-pf-pop items-center gap-3 rounded-[18px] bg-ink py-3 pr-2 pl-3.5 text-white shadow-[0_12px_32px_rgba(0,0,0,0.22)] wide:inset-x-auto wide:right-6 wide:bottom-6">
           <img src="/icons/icon-192.png" alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-[11px]" />

@@ -1,6 +1,7 @@
-import { createBrowserRouter, Navigate, Outlet, ScrollRestoration } from 'react-router'
+import { createBrowserRouter, Navigate, Outlet, ScrollRestoration, useLocation } from 'react-router'
 import { ErrorState, Loading } from '@/ui'
 import { bindRouter } from '@/lib/urlState'
+import { useDocumentTitle, type RouteHandle } from '@/lib/title'
 import { useAuth } from './auth'
 import { FarmProvider, useIsSuperAdmin, useMemberships } from './farm'
 import { OverlayProvider } from './overlays'
@@ -22,6 +23,7 @@ function FullLoading() {
 
 function Root() {
   const { user, loading } = useAuth()
+  useDocumentTitle(!loading && !user ? 'Entrar' : undefined)
   if (loading) return <FullLoading />
   if (!user) return <Login />
   return <><Outlet /><ScrollRestoration /></>
@@ -46,6 +48,13 @@ function FarmGate() {
 }
 
 const page = (load: () => Promise<{ default: React.ComponentType }>) => async () => ({ Component: (await load()).default })
+const t = (title: string): RouteHandle => ({ title })
+
+/** Old URL kept working: swaps the path prefix and keeps the rest, the query and the hash. */
+function Moved({ from, to }: { from: string; to: string }) {
+  const { pathname, search, hash } = useLocation()
+  return <Navigate to={`${to}${pathname.slice(from.length)}${search}${hash}`} replace />
+}
 
 export const router = createBrowserRouter([
   {
@@ -58,25 +67,27 @@ export const router = createBrowserRouter([
       {
         element: <AdminGate />,
         children: [
-          { path: 'admin', lazy: page(() => import('@/features/admin/AdminPage')) },
-          { path: 'admin/utilizadores/:userId', lazy: page(() => import('@/features/admin/UserPage')) },
+          { path: 'admin', handle: t('Administração'), lazy: page(() => import('@/features/admin/AdminPage')) },
+          { path: 'admin/users/:userId', handle: t('Utilizador'), lazy: page(() => import('@/features/admin/UserPage')) },
+          { path: 'admin/utilizadores/*', element: <Moved from="/admin/utilizadores" to="/admin/users" /> },
         ],
       },
       {
         element: <FarmGate />,
         children: [
           { index: true, element: <Navigate to="/herd" replace /> },
-          { path: 'herd', lazy: page(() => import('@/features/herd/HerdPage')) },
-          { path: 'herd/pens/:penId', lazy: page(() => import('@/features/herd/PenPage')) },
-          { path: 'herd/animals/:tag', lazy: page(() => import('@/features/herd/AnimalPage')) },
-          { path: 'money', lazy: page(() => import('@/features/money/MoneyPage')) },
-          { path: 'reports', lazy: page(() => import('@/features/reports/ReportsPage')) },
-          { path: 'stock', lazy: page(() => import('@/features/stock/StockPage')) },
-          { path: 'help', lazy: page(() => import('@/features/help/HelpPage')) },
-          { path: 'help/playbooks/:id', lazy: page(() => import('@/features/help/PlaybookPage')) },
-          { path: 'help/articles/:id', lazy: page(() => import('@/features/help/ArticlePage')) },
-          { path: 'settings', lazy: page(() => import('@/features/settings/SettingsPage')) },
-          { path: '*', lazy: page(() => import('@/features/NotFound')) },
+          { path: 'herd', handle: t('Animais'), lazy: page(() => import('@/features/herd/HerdPage')) },
+          { path: 'herd/pens/:penId', handle: t('Curral'), lazy: page(() => import('@/features/herd/PenPage')) },
+          { path: 'herd/animals/:tag', handle: t('Animal'), lazy: page(() => import('@/features/herd/AnimalPage')) },
+          { path: 'expenses', handle: t('Despesas'), lazy: page(() => import('@/features/money/MoneyPage')) },
+          { path: 'money/*', element: <Moved from="/money" to="/expenses" /> },
+          { path: 'reports', handle: t('Relatórios'), lazy: page(() => import('@/features/reports/ReportsPage')) },
+          { path: 'stock', handle: t('Stock'), lazy: page(() => import('@/features/stock/StockPage')) },
+          { path: 'help', handle: t('Ajuda'), lazy: page(() => import('@/features/help/HelpPage')) },
+          { path: 'help/playbooks/:id', handle: t('Guia'), lazy: page(() => import('@/features/help/PlaybookPage')) },
+          { path: 'help/articles/:id', handle: t('Artigo'), lazy: page(() => import('@/features/help/ArticlePage')) },
+          { path: 'settings', handle: t('Definições'), lazy: page(() => import('@/features/settings/SettingsPage')) },
+          { path: '*', handle: t('Página não encontrada'), lazy: page(() => import('@/features/NotFound')) },
         ],
       },
     ],
