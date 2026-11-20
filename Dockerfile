@@ -14,6 +14,8 @@ FROM nginx:1.29-alpine AS runtime
 ENV SUPABASE_URL="" \
     SUPABASE_PUBLISHABLE_KEY=""
 
+COPY docker/nginx-main.conf /etc/nginx/nginx.conf
+COPY docker/runtime-config.js /etc/nginx/njs/runtime-config.js
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --chmod=755 docker/40-suino-gestor-config.sh /docker-entrypoint.d/40-suino-gestor-config.sh
 COPY --from=build /app/dist /usr/share/nginx/html

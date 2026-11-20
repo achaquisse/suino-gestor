@@ -138,7 +138,7 @@ export function Login() {
           {!supabaseConfigured && (
             <div className="flex items-start gap-2.5 rounded-[14px] bg-warn-soft px-3.5 py-3 text-sm text-warn">
               <Icon name="warning" />
-              <span>Configure <code>VITE_SUPABASE_URL</code> e <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> no ficheiro <code>.env</code>.</span>
+              <span>Configure <code>VITE_SUPABASE_URL</code> e <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> no ficheiro <code>.env</code> (ou <code>SUPABASE_URL</code> e <code>SUPABASE_PUBLISHABLE_KEY</code> como variáveis de ambiente do contentor Docker).</span>
             </div>
           )}
           {error && (

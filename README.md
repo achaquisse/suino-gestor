@@ -102,6 +102,20 @@ React 19 + Vite, TanStack Query, React Router, Tailwind v4, Zod, Supabase (Postg
 | `npm run db:start` / `db:stop` / `db:status` / `db:reset` | Manage the local Supabase stack                   |
 | `npm run db:lint`   | Lint the database schema with the Supabase CLI                                          |
 
+## Docker
+
+The image is built without Supabase settings; they are read from the container's environment on every request to `/config.js`, so one image works for any project:
+
+```sh
+docker build -t suino-gestor .
+docker run -p 8080:8080 \
+  -e SUPABASE_URL=https://your-project-ref.supabase.co \
+  -e SUPABASE_PUBLISHABLE_KEY=sb_publishable_... \
+  suino-gestor
+```
+
+`VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` are accepted as fallbacks. Nothing is written to disk at start-up, so the container also runs as a non-root user (`--user 101`) or with `--read-only --tmpfs /tmp`.
+
 ## Access model
 
 Every row carries `farm_id`; RLS checks membership through `is_member` / `has_role`.
